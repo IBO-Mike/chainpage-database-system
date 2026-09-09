@@ -1,0 +1,12 @@
+edu/csu/chainpage/engine/support/FakePageStorageClient.class
+edu/csu/chainpage/engine/common/DbResultTest.class
+edu/csu/chainpage/engine/support/FakeSqlCompilerClient.class
+edu/csu/chainpage/engine/api/DatabaseRequestTest.class
+edu/csu/chainpage/engine/api/DatabaseCliTest.class
+edu/csu/chainpage/engine/lifecycle/DatabaseLifecycleTest.class
+edu/csu/chainpage/engine/common/JsonCodecTest.class
+edu/csu/chainpage/engine/common/JsonCodecTest$Payload.class
+edu/csu/chainpage/engine/support/FakeClientTest.class
+edu/csu/chainpage/engine/common/DbErrorTest.class
+edu/csu/chainpage/engine/contract/ContractDtoTest.class
+edu/csu/chainpage/engine/api/DatabaseApiTest.class
