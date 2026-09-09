@@ -1,3 +1,5 @@
+import base64
+import binascii
 from dataclasses import dataclass, field
 import threading
 from typing import Dict, List
@@ -194,3 +196,51 @@ class BufferPool:
             'flushes': self.flushes,
             'policy': self.policy.name,
         }
+
+    @staticmethod
+    def _fields(request, allowed):
+        unknown = set(request) - set(allowed)
+        if unknown:
+            raise StorageError('INVALID_REQUEST', f'请求包含未定义字段: {sorted(unknown)}')
+
+    @staticmethod
+    def _decode(data, page_id=None):
+        if not isinstance(data, str):
+            raise StorageError('INVALID_PAGE_DATA', 'data 必须是 Base64 字符串', page_id=page_id)
+        try:
+            raw = base64.b64decode(data, validate=True)
+        except (binascii.Error, ValueError) as exc:
+            raise StorageError('INVALID_PAGE_DATA', 'data 不是合法 Base64', page_id=page_id) from exc
+        if len(raw) != PAGE_SIZE:
+            raise StorageError('INVALID_PAGE_SIZE', 'Base64 解码后必须恰好为 4096 字节', page_id=page_id)
+        return raw
+
+    def handle(self, request):
+        """Standalone JSON API matching section 3 of paged-storage-spec.md."""
+        try:
+            if not isinstance(request, dict):
+                raise StorageError('INVALID_REQUEST', '请求必须是 JSON 对象')
+            op = request.get('op')
+            if op == 'get_page':
+                self._fields(request, {'op', 'pageId'})
+                page_id = request.get('pageId'); data, hit, dirty = self.get_page(page_id)
+                result = {'pageId': page_id, 'data': base64.b64encode(data).decode('ascii'), 'hit': hit, 'dirty': dirty}
+            elif op == 'put_page':
+                self._fields(request, {'op', 'pageId', 'data', 'dirty'})
+                page_id = request.get('pageId'); dirty = request.get('dirty')
+                if not isinstance(dirty, bool):
+                    raise StorageError('INVALID_REQUEST', 'dirty 必须是布尔值', page_id=page_id)
+                evicted, flushed = self.put_page(page_id, self._decode(request.get('data'), page_id), dirty=dirty)
+                result = {'pageId': page_id, 'evicted': evicted, 'flushedPageId': flushed}
+            elif op == 'flush_page':
+                self._fields(request, {'op', 'pageId'}); page_id = request.get('pageId'); self.flush_page(page_id)
+                result = {'pageId': page_id, 'flushed': True}
+            elif op == 'flush_all':
+                self._fields(request, {'op'}); result = {'flushedPageIds': self.flush_all()}
+            elif op == 'stats':
+                self._fields(request, {'op'}); result = self.stats()
+            else:
+                raise StorageError('UNSUPPORTED_OPERATION', f'不支持的 Buffer Pool 操作: {op}')
+            return {'ok': True, 'data': result}
+        except StorageError as exc:
+            return {'ok': False, 'error': exc.to_dict()}
