@@ -3,6 +3,8 @@ import base64
 import pytest
 
 from storage import StorageManager, StorageError
+from storage.replacement import make_policy
+from storage.table_page_map import TablePageMap
 
 
 def page_bytes(fill: int):
@@ -125,3 +127,40 @@ def test_non_unique_index_and_duplicate_constraint(tmp_path):
     db.index_insert(4, 1, {'pageId': 1, 'slotId': 1})
     with pytest.raises(StorageError):
         db.index_insert(4, 1, {'pageId': 2, 'slotId': 2})
+
+
+def test_each_core_submodule_has_standalone_json_contract(tmp_path):
+    db = StorageManager(tmp_path / 'db', capacity=2)
+
+    alloc = db.pages.handle({'op': 'allocate_page'})
+    assert alloc['ok'] is True
+    page_id = alloc['data']['pageId']
+    encoded = base64.b64encode(page_bytes(5)).decode('ascii')
+
+    fm_write = db.pages.file_manager.handle({'op': 'write_at', 'pageId': page_id, 'data': encoded})
+    assert fm_write == {'ok': True, 'data': {'pageId': page_id, 'written': 4096}}
+    pm_read = db.pages.handle({'op': 'read_page', 'pageId': page_id})
+    assert pm_read['ok'] and base64.b64decode(pm_read['data']['data']) == page_bytes(5)
+
+    first = db.buffer.handle({'op': 'get_page', 'pageId': page_id})
+    second = db.buffer.handle({'op': 'get_page', 'pageId': page_id})
+    assert first['data']['hit'] is False and second['data']['hit'] is True
+    assert db.buffer.handle({'op': 'stats'})['data']['hits'] >= 1
+
+    policy = make_policy('LRU')
+    assert policy.handle({'op': 'record_insert', 'pageId': 1})['ok']
+    assert policy.handle({'op': 'record_insert', 'pageId': 2})['ok']
+    assert policy.handle({'op': 'record_access', 'pageId': 1})['ok']
+    assert policy.handle({'op': 'choose_victim', 'residentPageIds': [1, 2]})['data']['pageId'] == 2
+    bad_policy = policy.handle({'op': 'choose_victim', 'residentPageIds': [1, 999]})
+    assert bad_policy['ok'] is False and bad_policy['error']['code'] == 'BUFFER_POLICY_INVALID_STATE'
+
+    page_map = TablePageMap(tmp_path / 'map')
+    assert page_map.handle({'op': 'create_table_pages', 'table': 'Student'})['data']['table'] == 'student'
+    assert page_map.handle({'op': 'append_page', 'table': 'student', 'pageId': 10})['ok']
+    duplicate = page_map.handle({'op': 'append_page', 'table': 'student', 'pageId': 10})
+    assert duplicate['ok'] is False and duplicate['error']['code'] == 'STORAGE_TABLE_EXISTS'
+
+    db.pages.handle({'op': 'free_page', 'pageId': page_id})
+    freed_read = db.pages.file_manager.handle({'op': 'read_at', 'pageId': page_id})
+    assert freed_read['ok'] is False and freed_read['error']['code'] == 'PAGE_NOT_ALLOCATED'
