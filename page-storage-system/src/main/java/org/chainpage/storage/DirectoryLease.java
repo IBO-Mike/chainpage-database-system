@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.locks.ReentrantLock;
 
+/** Owns the directory file lock and retires an idle in-process instance when it is reopened. */
 final class DirectoryLease implements AutoCloseable {
     private static final Map<Path, DirectoryLease> LIVE = new HashMap<>();
     private final Path key;
@@ -21,7 +22,11 @@ final class DirectoryLease implements AutoCloseable {
             DirectoryLease old = LIVE.get(key);
             if (old != null && !old.closed) old.retireForReopen();
             try {
-                channel = FileChannel.open(root.resolve("storage.lock"), StandardOpenOption.CREATE, StandardOpenOption.WRITE);
+                channel =
+                        FileChannel.open(
+                                root.resolve("storage.lock"),
+                                StandardOpenOption.CREATE,
+                                StandardOpenOption.WRITE);
                 lock = channel.tryLock();
                 if (lock == null) throw new IOException("locked");
                 LIVE.put(key, this);
@@ -31,27 +36,41 @@ final class DirectoryLease implements AutoCloseable {
         }
     }
 
-    synchronized void attach(ReentrantLock guard) { operationGuard = guard; }
+    synchronized void attach(ReentrantLock guard) {
+        operationGuard = guard;
+    }
 
     private void retireForReopen() {
         ReentrantLock guard;
-        synchronized (this) { guard = operationGuard; }
+        synchronized (this) {
+            guard = operationGuard;
+        }
         if (guard != null && !guard.tryLock())
             throw new StorageException("STORAGE_BUSY", "当前实例仍在执行存储操作");
-        try { close(); }
-        finally { if (guard != null) guard.unlock(); }
+        try {
+            close();
+        } finally {
+            if (guard != null) guard.unlock();
+        }
     }
 
     synchronized void check() {
         if (closed) throw new StorageException("STORAGE_CLOSED", "存储已关闭或被重新打开");
     }
 
-    @Override public void close() {
+    @Override
+    public void close() {
         synchronized (this) {
             if (closed) return;
             closed = true;
-            try { lock.release(); channel.close(); } catch (IOException ignored) { }
+            try {
+                lock.release();
+                channel.close();
+            } catch (IOException ignored) {
+            }
         }
-        synchronized (LIVE) { if (LIVE.get(key) == this) LIVE.remove(key); }
+        synchronized (LIVE) {
+            if (LIVE.get(key) == this) LIVE.remove(key);
+        }
     }
 }
