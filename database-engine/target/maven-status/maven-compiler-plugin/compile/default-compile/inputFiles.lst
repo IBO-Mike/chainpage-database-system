@@ -27,3 +27,14 @@
 /Users/mike/Files/03_Projects/chainpage-database-system/database-engine/src/main/java/edu/csu/chainpage/engine/lifecycle/DatabaseLifecycle.java
 /Users/mike/Files/03_Projects/chainpage-database-system/database-engine/src/main/java/edu/csu/chainpage/engine/lifecycle/ShutdownResult.java
 /Users/mike/Files/03_Projects/chainpage-database-system/database-engine/src/main/java/edu/csu/chainpage/engine/lifecycle/StartupResult.java
+/Users/mike/Files/03_Projects/chainpage-database-system/database-engine/src/main/java/edu/csu/chainpage/engine/storage/ColumnSchema.java
+/Users/mike/Files/03_Projects/chainpage-database-system/database-engine/src/main/java/edu/csu/chainpage/engine/storage/DataPage.java
+/Users/mike/Files/03_Projects/chainpage-database-system/database-engine/src/main/java/edu/csu/chainpage/engine/storage/DataPageCodec.java
+/Users/mike/Files/03_Projects/chainpage-database-system/database-engine/src/main/java/edu/csu/chainpage/engine/storage/InternalRow.java
+/Users/mike/Files/03_Projects/chainpage-database-system/database-engine/src/main/java/edu/csu/chainpage/engine/storage/PageRecordCodec.java
+/Users/mike/Files/03_Projects/chainpage-database-system/database-engine/src/main/java/edu/csu/chainpage/engine/storage/PageSlot.java
+/Users/mike/Files/03_Projects/chainpage-database-system/database-engine/src/main/java/edu/csu/chainpage/engine/storage/Row.java
+/Users/mike/Files/03_Projects/chainpage-database-system/database-engine/src/main/java/edu/csu/chainpage/engine/storage/RowId.java
+/Users/mike/Files/03_Projects/chainpage-database-system/database-engine/src/main/java/edu/csu/chainpage/engine/storage/RowSet.java
+/Users/mike/Files/03_Projects/chainpage-database-system/database-engine/src/main/java/edu/csu/chainpage/engine/storage/StorageEngine.java
+/Users/mike/Files/03_Projects/chainpage-database-system/database-engine/src/main/java/edu/csu/chainpage/engine/storage/TableSchema.java
