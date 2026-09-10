@@ -6,6 +6,9 @@ import edu.csu.chainpage.engine.contract.CompileRequest;
 import edu.csu.chainpage.engine.contract.CompileResponse;
 import edu.csu.chainpage.engine.contract.CompiledStatement;
 import edu.csu.chainpage.engine.lifecycle.DatabaseLifecycle;
+import edu.csu.chainpage.engine.plan.OptimizedExecutionRequest;
+import edu.csu.chainpage.engine.plan.OptimizedExecutionResult;
+import edu.csu.chainpage.engine.plan.OptimizedPlanExecutor;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -18,6 +21,7 @@ public final class DatabaseApi {
     private final CatalogSnapshotProvider snapshotProvider; // 目录快照提供器
     private final edu.csu.chainpage.engine.contract.SqlCompilerClient compilerClient; // SQL编译器客户端
     private final StatementExecutor statementExecutor; // 计划执行器
+    private final OptimizedPlanExecutor optimizedPlanExecutor; // 优化计划执行器
 
     // 创建数据库API
     public DatabaseApi(
@@ -25,10 +29,31 @@ public final class DatabaseApi {
             CatalogSnapshotProvider snapshotProvider,
             edu.csu.chainpage.engine.contract.SqlCompilerClient compilerClient,
             StatementExecutor statementExecutor) {
+        this(lifecycle, snapshotProvider, compilerClient, statementExecutor, null);
+    }
+
+    // 创建包含优化计划执行器的数据库API
+    public DatabaseApi(
+            DatabaseLifecycle lifecycle,
+            CatalogSnapshotProvider snapshotProvider,
+            edu.csu.chainpage.engine.contract.SqlCompilerClient compilerClient,
+            StatementExecutor statementExecutor,
+            OptimizedPlanExecutor optimizedPlanExecutor) {
         this.lifecycle = Objects.requireNonNull(lifecycle, "lifecycle cannot be null");
         this.snapshotProvider = Objects.requireNonNull(snapshotProvider, "snapshotProvider cannot be null");
         this.compilerClient = Objects.requireNonNull(compilerClient, "compilerClient cannot be null");
         this.statementExecutor = Objects.requireNonNull(statementExecutor, "statementExecutor cannot be null");
+        this.optimizedPlanExecutor = optimizedPlanExecutor;
+    }
+
+    // 提供优化执行器位于普通语句执行器之前的构造顺序
+    public DatabaseApi(
+            DatabaseLifecycle lifecycle,
+            CatalogSnapshotProvider snapshotProvider,
+            edu.csu.chainpage.engine.contract.SqlCompilerClient compilerClient,
+            OptimizedPlanExecutor optimizedPlanExecutor,
+            StatementExecutor statementExecutor) {
+        this(lifecycle, snapshotProvider, compilerClient, statementExecutor, optimizedPlanExecutor);
     }
 
     // 处理一条数据库入口请求
@@ -117,14 +142,36 @@ public final class DatabaseApi {
                     plan
             );
             if (!executionResult.isOk()) {
-                return DbResult.fail(executionResult.error().withStatementIndex(
-                        statement.getStatementIndex()
+                return DbResult.ok(DatabaseResponse.failure(
+                        results,
+                        executionResult.error().withStatementIndex(
+                                statement.getStatementIndex()
+                        )
                 ));
             }
             results.add(executionResult.data());
         }
 
         return DbResult.ok(DatabaseResponse.executeSuccess(results));
+    }
+
+    // 验证就绪状态后执行优化计划，并返回实际计划与规则信息
+    public DbResult<OptimizedExecutionResult> executeOptimized(
+            String requestId,
+            OptimizedExecutionRequest request) {
+        DbResult<Void> ready = ensureReady(requestId);
+        if (!ready.isOk()) {
+            return DbResult.fail(ready.error());
+        }
+        if (optimizedPlanExecutor == null) {
+            return DbResult.fail(edu.csu.chainpage.engine.common.DbError.executor(
+                    requestId,
+                    null,
+                    "EXECUTOR_OPTIMIZED_EXECUTOR_UNAVAILABLE",
+                    "数据库API未配置优化计划执行器"
+            ));
+        }
+        return optimizedPlanExecutor.execute(requestId, request);
     }
 
     // 检查数据库是否已经启动并处于就绪状态

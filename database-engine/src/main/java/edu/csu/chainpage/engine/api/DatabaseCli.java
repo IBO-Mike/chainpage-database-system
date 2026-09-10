@@ -70,9 +70,19 @@ public final class DatabaseCli {
             PrintStream output,
             DbResult<DatabaseResponse> response) {
         Map<String, Object> envelope = new LinkedHashMap<>();
-        envelope.put("ok", response.isOk());
-        envelope.put("data", response.isOk() ? response.data() : null);
-        envelope.put("error", response.isOk() ? null : response.error());
+        DatabaseResponse domainResponse = response.isOk() ? response.data() : null;
+        boolean partialFailure = domainResponse != null && domainResponse.getError() != null;
+        envelope.put("ok", response.isOk() && !partialFailure);
+        envelope.put(
+                "data",
+                partialFailure
+                        ? Map.of("results", domainResponse.getResults())
+                        : response.isOk() ? response.data() : null
+        );
+        envelope.put(
+                "error",
+                partialFailure ? domainResponse.getError() : response.isOk() ? null : response.error()
+        );
         output.println(jsonCodec.write(envelope));
     }
 

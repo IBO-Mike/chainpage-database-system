@@ -72,8 +72,9 @@ class DatabaseApiTest {
 
         var result = api.handle("req-1", new DatabaseRequest("SELECT 1; SELECT 2;", "execute"));
 
-        assertFalse(result.isOk());
-        assertEquals(1, result.error().getStatementIndex());
+        assertTrue(result.isOk());
+        assertEquals(1, ((DatabaseResponse) result.data()).getError().getStatementIndex());
+        assertEquals(1, result.data().getResults().size());
     }
 
     @Test
