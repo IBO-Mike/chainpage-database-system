@@ -16,8 +16,10 @@ jobs:
         working-directory: page-storage-system
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-java@v4
         with:
-          python-version: '3.12'
-      - run: python -m pip install pytest
-      - run: PYTHONPATH=. pytest -q
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+          cache-dependency-path: page-storage-system/pom.xml
+      - run: mvn --batch-mode clean test
