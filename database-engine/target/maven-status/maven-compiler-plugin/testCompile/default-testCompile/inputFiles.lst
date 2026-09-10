@@ -17,6 +17,12 @@
 /Users/mike/Files/03_Projects/chainpage-database-system/database-engine/src/test/java/edu/csu/chainpage/engine/executor/core/ProjectExecutorTest.java
 /Users/mike/Files/03_Projects/chainpage-database-system/database-engine/src/test/java/edu/csu/chainpage/engine/executor/core/SeqScanExecutorTest.java
 /Users/mike/Files/03_Projects/chainpage-database-system/database-engine/src/test/java/edu/csu/chainpage/engine/executor/expression/ExpressionEvaluatorTest.java
+/Users/mike/Files/03_Projects/chainpage-database-system/database-engine/src/test/java/edu/csu/chainpage/engine/executor/extended/ExtendedExecutorTestSupport.java
+/Users/mike/Files/03_Projects/chainpage-database-system/database-engine/src/test/java/edu/csu/chainpage/engine/executor/extended/ExtendedPlanDispatcherTest.java
+/Users/mike/Files/03_Projects/chainpage-database-system/database-engine/src/test/java/edu/csu/chainpage/engine/executor/extended/GroupByExecutorTest.java
+/Users/mike/Files/03_Projects/chainpage-database-system/database-engine/src/test/java/edu/csu/chainpage/engine/executor/extended/JoinExecutorTest.java
+/Users/mike/Files/03_Projects/chainpage-database-system/database-engine/src/test/java/edu/csu/chainpage/engine/executor/extended/SortExecutorTest.java
+/Users/mike/Files/03_Projects/chainpage-database-system/database-engine/src/test/java/edu/csu/chainpage/engine/executor/extended/UpdateExecutorTest.java
 /Users/mike/Files/03_Projects/chainpage-database-system/database-engine/src/test/java/edu/csu/chainpage/engine/integration/CoreIndependentAcceptanceTest.java
 /Users/mike/Files/03_Projects/chainpage-database-system/database-engine/src/test/java/edu/csu/chainpage/engine/integration/CoreSqlFlowTest.java
 /Users/mike/Files/03_Projects/chainpage-database-system/database-engine/src/test/java/edu/csu/chainpage/engine/integration/ErrorPropagationTest.java

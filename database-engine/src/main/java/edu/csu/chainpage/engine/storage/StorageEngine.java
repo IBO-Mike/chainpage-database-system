@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -168,6 +169,178 @@ public final class StorageEngine {
             rows.addAll(liveRows.data());
         }
         return DbResult.ok(new RowSet(schema.getColumns(), rows));
+    }
+
+    // 更新且仅更新调用方指定的记录，并返回实际更新数量
+    public DbResult<Integer> updateRows(
+            String requestId,
+            TableSchema schema,
+            List<RowId> rowIds,
+            Map<String, Object> assignments) {
+        if (schema == null) {
+            return failure(requestId, "INVALID_SCHEMA", "表结构不能为null", null);
+        }
+        DbResult<Void> schemaResult = recordCodec.validateSchema(schema);
+        if (!schemaResult.isOk()) {
+            return failureFrom(schemaResult.error(), requestId, null);
+        }
+        TableSchema registered = schemas.get(schema.getName());
+        if (registered == null) {
+            return failure(requestId, "TABLE_NOT_FOUND", "表结构不存在：" + schema.getName(), null);
+        }
+        if (!sameSchema(registered, schema)) {
+            return failure(requestId, "TABLE_SCHEMA_CONFLICT", "表结构与已登记结构不一致：" + schema.getName(), null);
+        }
+
+        DbResult<Map<String, Object>> normalizedAssignments = normalizeAssignments(
+                requestId,
+                schema,
+                assignments
+        );
+        if (!normalizedAssignments.isOk()) {
+            return DbResult.fail(normalizedAssignments.error());
+        }
+        if (rowIds == null) {
+            return failure(requestId, "INVALID_ROW_ID", "记录标识列表不能为null", null);
+        }
+        if (rowIds.isEmpty()) {
+            return DbResult.ok(0);
+        }
+
+        DbResult<List<Integer>> pageIdsResult = listTablePageIds(requestId, schema.getName());
+        if (!pageIdsResult.isOk()) {
+            return DbResult.fail(pageIdsResult.error());
+        }
+        Set<Integer> tablePageIds = new HashSet<>(pageIdsResult.data());
+        Set<RowId> uniqueRowIds = new LinkedHashSet<>();
+        Map<Integer, List<RowId>> rowsByPage = new LinkedHashMap<>();
+        for (RowId rowId : rowIds) {
+            if (rowId == null) {
+                return failure(requestId, "INVALID_ROW_ID", "记录标识不能为null", null);
+            }
+            if (!tablePageIds.contains(rowId.pageId())) {
+                return failure(requestId, "ROW_NOT_IN_TABLE", "记录页不属于目标表", rowId.pageId());
+            }
+            if (uniqueRowIds.add(rowId)) {
+                rowsByPage.computeIfAbsent(rowId.pageId(), ignored -> new ArrayList<>()).add(rowId);
+            }
+        }
+
+        Map<Integer, String> encodedPages = new LinkedHashMap<>();
+        int updatedCount = 0;
+        for (Map.Entry<Integer, List<RowId>> entry : rowsByPage.entrySet()) {
+            int pageId = entry.getKey();
+            DbResult<PageData> pageResult = pageStorageClient.getPage(requestId, pageId);
+            if (!pageResult.isOk()) {
+                return failureFrom(pageResult.error(), requestId, pageId);
+            }
+            PageData pageData = pageResult.data();
+            if (pageData == null || pageData.getPageId() != pageId) {
+                return failure(requestId, "PAGE_ID_MISMATCH", "页式存储系统返回了错误页号", pageId);
+            }
+            DbResult<DataPage> decodedPage = dataPageCodec.decode(pageData.getData());
+            if (!decodedPage.isOk()) {
+                return failureFrom(decodedPage.error(), requestId, pageId);
+            }
+
+            List<PageSlot> updatedSlots = new ArrayList<>();
+            for (PageSlot slot : decodedPage.data().slots()) {
+                updatedSlots.add(new PageSlot(slot.getData(), slot.isDeleted()));
+            }
+            for (RowId rowId : entry.getValue()) {
+                if (rowId.slotId() >= updatedSlots.size()) {
+                    return failure(requestId, "ROW_NOT_FOUND", "记录槽不存在", pageId);
+                }
+                PageSlot slot = updatedSlots.get(rowId.slotId());
+                if (slot.isDeleted()) {
+                    return failure(requestId, "ROW_NOT_FOUND", "记录已经删除", pageId);
+                }
+                DbResult<Row> decodedRow = recordCodec.decode(schema, slot.getData());
+                if (!decodedRow.isOk()) {
+                    return failureFrom(decodedRow.error(), requestId, pageId);
+                }
+
+                Map<String, Object> updatedValues = new LinkedHashMap<>(decodedRow.data().values());
+                updatedValues.putAll(normalizedAssignments.data());
+                DbResult<byte[]> encodedRow = recordCodec.encode(schema, new Row(updatedValues));
+                if (!encodedRow.isOk()) {
+                    return failureFrom(encodedRow.error(), requestId, pageId);
+                }
+                updatedSlots.set(rowId.slotId(), new PageSlot(encodedRow.data(), false));
+                updatedCount++;
+            }
+
+            DbResult<String> encodedPage = dataPageCodec.encode(new DataPage(updatedSlots));
+            if (!encodedPage.isOk()) {
+                return failureFrom(encodedPage.error(), requestId, pageId);
+            }
+            encodedPages.put(pageId, encodedPage.data());
+        }
+
+        for (Map.Entry<Integer, String> entry : encodedPages.entrySet()) {
+            DbResult<?> written = pageStorageClient.writePage(
+                    requestId,
+                    entry.getKey(),
+                    entry.getValue()
+            );
+            if (!written.isOk()) {
+                return failureFrom(written.error(), requestId, entry.getKey());
+            }
+        }
+        return DbResult.ok(updatedCount);
+    }
+
+    // 按物理位置读取一条尚未删除的记录
+    public DbResult<InternalRow> readRow(
+            String requestId,
+            TableSchema schema,
+            RowId rowId) {
+        if (schema == null) {
+            return failure(requestId, "INVALID_SCHEMA", "表结构不能为null", null);
+        }
+        DbResult<Void> schemaResult = recordCodec.validateSchema(schema);
+        if (!schemaResult.isOk()) {
+            return failureFrom(schemaResult.error(), requestId, null);
+        }
+        TableSchema registered = schemas.get(schema.getName());
+        if (registered == null) {
+            return failure(requestId, "TABLE_NOT_FOUND", "表结构不存在：" + schema.getName(), null);
+        }
+        if (!sameSchema(registered, schema)) {
+            return failure(requestId, "TABLE_SCHEMA_CONFLICT", "表结构与已登记结构不一致：" + schema.getName(), null);
+        }
+        if (rowId == null) {
+            return failure(requestId, "INVALID_ROW_ID", "记录标识不能为null", null);
+        }
+
+        DbResult<List<Integer>> pageIds = listTablePageIds(requestId, schema.getName());
+        if (!pageIds.isOk()) {
+            return DbResult.fail(pageIds.error());
+        }
+        if (!pageIds.data().contains(rowId.pageId())) {
+            return failure(requestId, "ROW_NOT_IN_TABLE", "记录页不属于目标表", rowId.pageId());
+        }
+        DbResult<PageData> pageResult = pageStorageClient.getPage(requestId, rowId.pageId());
+        if (!pageResult.isOk()) {
+            return failureFrom(pageResult.error(), requestId, rowId.pageId());
+        }
+        PageData pageData = pageResult.data();
+        if (pageData == null || pageData.getPageId() != rowId.pageId()) {
+            return failure(requestId, "PAGE_ID_MISMATCH", "页式存储系统返回了错误页号", rowId.pageId());
+        }
+        DbResult<DataPage> decodedPage = dataPageCodec.decode(pageData.getData());
+        if (!decodedPage.isOk()) {
+            return failureFrom(decodedPage.error(), requestId, rowId.pageId());
+        }
+        List<PageSlot> slots = decodedPage.data().slots();
+        if (rowId.slotId() >= slots.size() || slots.get(rowId.slotId()).isDeleted()) {
+            return failure(requestId, "ROW_NOT_FOUND", "记录不存在或已经删除", rowId.pageId());
+        }
+        DbResult<Row> decodedRow = recordCodec.decode(schema, slots.get(rowId.slotId()).getData());
+        if (!decodedRow.isOk()) {
+            return failureFrom(decodedRow.error(), requestId, rowId.pageId());
+        }
+        return DbResult.ok(new InternalRow(rowId, decodedRow.data()));
     }
 
     // 只标记调用方提供的记录位置，不影响同表其他记录
@@ -381,6 +554,45 @@ public final class StorageEngine {
             }
         }
         return true;
+    }
+
+    // 校验赋值列和值，并把列名规范化为小写
+    private DbResult<Map<String, Object>> normalizeAssignments(
+            String requestId,
+            TableSchema schema,
+            Map<String, Object> assignments) {
+        if (assignments == null || assignments.isEmpty()) {
+            return failure(requestId, "INVALID_ASSIGNMENT", "更新赋值不能为空", null);
+        }
+        Map<String, Object> normalized = new LinkedHashMap<>();
+        for (Map.Entry<String, Object> entry : assignments.entrySet()) {
+            String rawName = entry.getKey();
+            if (rawName == null || rawName.isBlank()) {
+                return failure(requestId, "INVALID_ASSIGNMENT", "更新列名不能为空", null);
+            }
+            String name = rawName.toLowerCase(Locale.ROOT);
+            if (normalized.containsKey(name)) {
+                return failure(requestId, "INVALID_ASSIGNMENT", "更新列名重复：" + name, null);
+            }
+            if (schema.findColumn(name) == null) {
+                return failure(requestId, "ROW_SCHEMA_MISMATCH", "更新引用了未知列：" + name, null);
+            }
+            if (entry.getValue() == null) {
+                return failure(requestId, "ROW_VALUE_NULL", "更新值不能为null：" + name, null);
+            }
+            normalized.put(name, entry.getValue());
+        }
+
+        Map<String, Object> probeValues = new LinkedHashMap<>();
+        for (ColumnSchema column : schema.getColumns()) {
+            probeValues.put(column.getName(), "INT".equals(column.getDataType()) ? 0 : "");
+        }
+        probeValues.putAll(normalized);
+        DbResult<Void> valueValidation = recordCodec.validateRow(schema, new Row(probeValues));
+        if (!valueValidation.isOk()) {
+            return failureFrom(valueValidation.error(), requestId, null);
+        }
+        return DbResult.ok(Map.copyOf(normalized));
     }
 
     // 创建统一格式的存储引擎错误

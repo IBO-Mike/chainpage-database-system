@@ -17,6 +17,10 @@ import edu.csu.chainpage.engine.executor.core.FilterExecutor;
 import edu.csu.chainpage.engine.executor.core.InsertExecutor;
 import edu.csu.chainpage.engine.executor.core.ProjectExecutor;
 import edu.csu.chainpage.engine.executor.core.SeqScanExecutor;
+import edu.csu.chainpage.engine.executor.extended.GroupByExecutor;
+import edu.csu.chainpage.engine.executor.extended.JoinExecutor;
+import edu.csu.chainpage.engine.executor.extended.SortExecutor;
+import edu.csu.chainpage.engine.executor.extended.UpdateExecutor;
 import edu.csu.chainpage.engine.plan.JsonPlanNode;
 import edu.csu.chainpage.engine.plan.PlanDispatcher;
 import edu.csu.chainpage.engine.plan.PlanNode;
@@ -69,7 +73,7 @@ public final class CoreEngineFixture {
         }
     }
 
-    // 注册阶段5的六个核心执行器
+    // 注册核心执行器和阶段8扩展执行器
     private void registerExecutors() {
         dispatcher.register(new CreateTableExecutor(storageEngine, catalogManager));
         dispatcher.register(new InsertExecutor(storageEngine, catalogManager));
@@ -77,6 +81,10 @@ public final class CoreEngineFixture {
         dispatcher.register(new FilterExecutor(dispatcher));
         dispatcher.register(new ProjectExecutor(dispatcher));
         dispatcher.register(new DeleteExecutor(storageEngine, catalogManager));
+        dispatcher.register(new UpdateExecutor(storageEngine, catalogManager));
+        dispatcher.register(new SortExecutor(dispatcher));
+        dispatcher.register(new GroupByExecutor(dispatcher));
+        dispatcher.register(new JoinExecutor(dispatcher));
     }
 
     // 把编译器计划解析并交给计划分派器执行

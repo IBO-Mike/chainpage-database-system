@@ -90,8 +90,8 @@ class OptimizedPlanExecutorTest {
     @Test
     void returnsOptimizedPlanValidationAndExecutionErrors() {
         JsonPlanNode invalidPlan = new JsonPlanNode(
-                "Update",
-                Map.of("kind", "Update"),
+                "FutureNode",
+                Map.of("kind", "FutureNode"),
                 List.of(),
                 List.of()
         );

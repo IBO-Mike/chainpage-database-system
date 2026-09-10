@@ -43,7 +43,12 @@ class PlanDispatcherTest {
     @Test
     void returnsUnsupportedErrorForUnknownPlan() {
         PlanDispatcher dispatcher = new PlanDispatcher();
-        PlanNode unknown = new JsonPlanNode("Update", Map.of("kind", "Update"), List.of(), List.of());
+        PlanNode unknown = new JsonPlanNode(
+                "FutureNode",
+                Map.of("kind", "FutureNode"),
+                List.of(),
+                List.of()
+        );
 
         var result = dispatcher.execute("req-1", unknown);
 
