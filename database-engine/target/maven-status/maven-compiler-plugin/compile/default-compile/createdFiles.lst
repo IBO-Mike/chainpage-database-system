@@ -1,5 +1,7 @@
 edu/csu/chainpage/engine/contract/DropTablePagesResult.class
 edu/csu/chainpage/engine/plan/PlanDispatcher.class
+edu/csu/chainpage/engine/executor/extended/GroupByExecutor.class
+edu/csu/chainpage/engine/storage/index/IndexLookup.class
 edu/csu/chainpage/engine/contract/SqlCompilerClient.class
 edu/csu/chainpage/engine/storage/InternalRow.class
 edu/csu/chainpage/engine/executor/core/InsertExecutor.class
@@ -7,6 +9,7 @@ edu/csu/chainpage/engine/plan/PlanDispatcher$SetOfKinds.class
 edu/csu/chainpage/engine/plan/PlanNode.class
 edu/csu/chainpage/engine/plan/PlanDispatcher$ExecutionContext.class
 edu/csu/chainpage/engine/catalog/CatalogRepository.class
+edu/csu/chainpage/engine/executor/extended/JoinExecutor.class
 edu/csu/chainpage/engine/api/DatabaseRequest.class
 edu/csu/chainpage/engine/contract/WritePageResult.class
 edu/csu/chainpage/engine/executor/ExecutionValue.class
@@ -17,6 +20,7 @@ edu/csu/chainpage/engine/storage/PageRecordCodec.class
 edu/csu/chainpage/engine/contract/CatalogSnapshot.class
 edu/csu/chainpage/engine/storage/ColumnSchema.class
 edu/csu/chainpage/engine/executor/PlanExecutor.class
+edu/csu/chainpage/engine/executor/extended/UpdateExecutor.class
 edu/csu/chainpage/engine/executor/core/SeqScanExecutor.class
 edu/csu/chainpage/engine/plan/OptimizedPlanExecutor.class
 edu/csu/chainpage/engine/plan/JsonPlanNode.class
@@ -26,15 +30,20 @@ edu/csu/chainpage/engine/contract/FlushResult.class
 edu/csu/chainpage/engine/api/DatabaseCli.class
 edu/csu/chainpage/engine/plan/OptimizedExecutionResult.class
 edu/csu/chainpage/engine/executor/core/FilterExecutor.class
+edu/csu/chainpage/engine/storage/StorageEngine$UnavailableIndexLookup.class
 edu/csu/chainpage/engine/storage/RowId.class
 edu/csu/chainpage/engine/common/DbError.class
+edu/csu/chainpage/engine/executor/extended/AggregateSpec.class
+edu/csu/chainpage/engine/executor/extended/SortExecutor.class
 edu/csu/chainpage/engine/plan/OptimizedExecutionRequest.class
 edu/csu/chainpage/engine/api/StatementExecutionResult.class
 edu/csu/chainpage/engine/storage/DataPageCodec.class
+edu/csu/chainpage/engine/storage/index/StorageIndexLookup.class
 edu/csu/chainpage/engine/storage/StorageEngine.class
 edu/csu/chainpage/engine/common/JsonCodecException.class
 edu/csu/chainpage/engine/plan/PlanParser.class
 edu/csu/chainpage/engine/storage/Row.class
+edu/csu/chainpage/engine/executor/extended/SortKey.class
 edu/csu/chainpage/engine/common/DbResult.class
 edu/csu/chainpage/engine/contract/PageStorageClient.class
 edu/csu/chainpage/engine/executor/core/CreateTableExecutor.class
@@ -43,6 +52,7 @@ edu/csu/chainpage/engine/catalog/StorageCatalogRepository.class
 edu/csu/chainpage/engine/api/DatabaseApi.class
 edu/csu/chainpage/engine/executor/CommandResult.class
 edu/csu/chainpage/engine/contract/ColumnSchema.class
+edu/csu/chainpage/engine/executor/extended/IndexScanExecutor.class
 edu/csu/chainpage/engine/storage/DataPage.class
 edu/csu/chainpage/engine/api/DatabaseResponse.class
 edu/csu/chainpage/engine/contract/CompileResponse.class

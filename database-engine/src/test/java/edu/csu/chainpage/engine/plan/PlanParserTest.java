@@ -63,7 +63,7 @@ class PlanParserTest {
 
     @Test
     void rejectsUnknownKindAndWrongChildCount() {
-        var unknown = parser.parse(plan("Update", Map.of(), List.of(), List.of()));
+        var unknown = parser.parse(plan("FutureNode", Map.of(), List.of(), List.of()));
         var wrongChildren = parser.parse(plan("Filter", Map.of(
                 "predicate", Map.of("kind", "LiteralExpr", "literalType", "BOOL", "value", true)
         ), List.of(), schema()));

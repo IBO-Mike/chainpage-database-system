@@ -55,6 +55,17 @@ public final class CommandResult {
         );
     }
 
+    // 创建更新结果
+    public static CommandResult update(int count) {
+        return new CommandResult(
+                "UPDATE",
+                List.of(),
+                List.of(),
+                count,
+                count == 1 ? "1 row updated" : count + " rows updated"
+        );
+    }
+
     // 创建查询结果
     public static CommandResult select(List<String> columns, List<List<Object>> rows) {
         List<List<Object>> safeRows = Objects.requireNonNull(rows, "rows cannot be null");

@@ -37,6 +37,13 @@
 /Users/mike/Files/03_Projects/chainpage-database-system/database-engine/src/main/java/edu/csu/chainpage/engine/executor/core/ProjectExecutor.java
 /Users/mike/Files/03_Projects/chainpage-database-system/database-engine/src/main/java/edu/csu/chainpage/engine/executor/core/SeqScanExecutor.java
 /Users/mike/Files/03_Projects/chainpage-database-system/database-engine/src/main/java/edu/csu/chainpage/engine/executor/expression/ExpressionEvaluator.java
+/Users/mike/Files/03_Projects/chainpage-database-system/database-engine/src/main/java/edu/csu/chainpage/engine/executor/extended/AggregateSpec.java
+/Users/mike/Files/03_Projects/chainpage-database-system/database-engine/src/main/java/edu/csu/chainpage/engine/executor/extended/GroupByExecutor.java
+/Users/mike/Files/03_Projects/chainpage-database-system/database-engine/src/main/java/edu/csu/chainpage/engine/executor/extended/IndexScanExecutor.java
+/Users/mike/Files/03_Projects/chainpage-database-system/database-engine/src/main/java/edu/csu/chainpage/engine/executor/extended/JoinExecutor.java
+/Users/mike/Files/03_Projects/chainpage-database-system/database-engine/src/main/java/edu/csu/chainpage/engine/executor/extended/SortExecutor.java
+/Users/mike/Files/03_Projects/chainpage-database-system/database-engine/src/main/java/edu/csu/chainpage/engine/executor/extended/SortKey.java
+/Users/mike/Files/03_Projects/chainpage-database-system/database-engine/src/main/java/edu/csu/chainpage/engine/executor/extended/UpdateExecutor.java
 /Users/mike/Files/03_Projects/chainpage-database-system/database-engine/src/main/java/edu/csu/chainpage/engine/lifecycle/CatalogLoader.java
 /Users/mike/Files/03_Projects/chainpage-database-system/database-engine/src/main/java/edu/csu/chainpage/engine/lifecycle/DatabaseLifecycle.java
 /Users/mike/Files/03_Projects/chainpage-database-system/database-engine/src/main/java/edu/csu/chainpage/engine/lifecycle/ShutdownResult.java
@@ -59,3 +66,5 @@
 /Users/mike/Files/03_Projects/chainpage-database-system/database-engine/src/main/java/edu/csu/chainpage/engine/storage/RowSet.java
 /Users/mike/Files/03_Projects/chainpage-database-system/database-engine/src/main/java/edu/csu/chainpage/engine/storage/StorageEngine.java
 /Users/mike/Files/03_Projects/chainpage-database-system/database-engine/src/main/java/edu/csu/chainpage/engine/storage/TableSchema.java
+/Users/mike/Files/03_Projects/chainpage-database-system/database-engine/src/main/java/edu/csu/chainpage/engine/storage/index/IndexLookup.java
+/Users/mike/Files/03_Projects/chainpage-database-system/database-engine/src/main/java/edu/csu/chainpage/engine/storage/index/StorageIndexLookup.java

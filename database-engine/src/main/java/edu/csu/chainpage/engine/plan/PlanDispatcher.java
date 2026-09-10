@@ -137,7 +137,7 @@ public final class PlanDispatcher {
         return failure(requestId, "EXECUTOR_UNSUPPORTED_PLAN", "不支持的计划节点：" + kind);
     }
 
-    // 判断计划种类是否属于当前基本执行框架
+    // 判断计划种类是否属于当前执行框架
     private boolean isSupportedKind(String kind) {
         return SetOfKinds.contains(kind);
     }
@@ -191,7 +191,7 @@ public final class PlanDispatcher {
                 new IdentityHashMap<>();
     }
 
-    // 基本执行阶段支持的六种计划节点
+    // 当前执行阶段支持的核心和扩展计划节点
     private static final class SetOfKinds {
         private static boolean contains(String kind) {
             return "CreateTable".equals(kind)
@@ -199,7 +199,12 @@ public final class PlanDispatcher {
                     || "SeqScan".equals(kind)
                     || "Filter".equals(kind)
                     || "Project".equals(kind)
-                    || "Delete".equals(kind);
+                    || "Delete".equals(kind)
+                    || "Update".equals(kind)
+                    || "Sort".equals(kind)
+                    || "GroupBy".equals(kind)
+                    || "Join".equals(kind)
+                    || "IndexScan".equals(kind);
         }
     }
 }

@@ -22,7 +22,12 @@ public final class PlanParser {
             "SeqScan",
             "Filter",
             "Project",
-            "Delete"
+            "Delete",
+            "Update",
+            "Sort",
+            "GroupBy",
+            "Join",
+            "IndexScan"
     );
 
     // 解析一个原始JSON计划
@@ -99,7 +104,8 @@ public final class PlanParser {
         }
 
         int expectedChildren = switch (plan.kind()) {
-            case "Filter", "Project" -> 1;
+            case "Filter", "Project", "Sort", "GroupBy" -> 1;
+            case "Join" -> 2;
             default -> 0;
         };
         if (plan.children().size() != expectedChildren) {
@@ -110,7 +116,8 @@ public final class PlanParser {
         }
         if ("CreateTable".equals(plan.kind())
                 || "Insert".equals(plan.kind())
-                || "Delete".equals(plan.kind())) {
+                || "Delete".equals(plan.kind())
+                || "Update".equals(plan.kind())) {
             if (!plan.schema().isEmpty()) {
                 return failure("EXECUTOR_INVALID_PLAN", plan.kind() + "节点的schema必须为空");
             }
@@ -214,6 +221,50 @@ public final class PlanParser {
                 }
                 return DbResult.ok(null);
             }
+            case "Update" -> {
+                DbResult<Void> table = requireString(plan, "table");
+                if (!table.isOk()) {
+                    return table;
+                }
+                if (!plan.fields().containsKey("predicate")) {
+                    return failure("EXECUTOR_INVALID_PLAN", "Update节点必须包含predicate字段");
+                }
+                return validateAssignments(plan.field("assignments"));
+            }
+            case "Sort" -> {
+                return validateSortKeys(plan.field("keys"));
+            }
+            case "GroupBy" -> {
+                DbResult<Void> keys = validateStringList(plan.field("keys"), "keys");
+                if (!keys.isOk()) {
+                    return keys;
+                }
+                return validateAggregates(plan.field("aggregates"));
+            }
+            case "Join" -> {
+                DbResult<Void> leftKey = requireString(plan, "leftKey");
+                if (!leftKey.isOk()) {
+                    return leftKey;
+                }
+                return requireString(plan, "rightKey");
+            }
+            case "IndexScan" -> {
+                DbResult<Void> table = requireString(plan, "table");
+                if (!table.isOk()) {
+                    return table;
+                }
+                DbResult<Void> index = requireString(plan, "index");
+                if (!index.isOk()) {
+                    return index;
+                }
+                Object condition = plan.field("condition");
+                if (!(condition instanceof Map<?, ?> expression)
+                        || !(expression.get("kind") instanceof String kind)
+                        || kind.isBlank()) {
+                    return failure("EXECUTOR_INVALID_PLAN", "IndexScan节点必须包含有效condition表达式");
+                }
+                return DbResult.ok(null);
+            }
             default -> {
                 return failure("EXECUTOR_UNSUPPORTED_PLAN", "不支持的计划节点：" + plan.kind());
             }
@@ -266,6 +317,72 @@ public final class PlanParser {
             }
             if (!names.add(name.toLowerCase(Locale.ROOT))) {
                 return failure("EXECUTOR_INVALID_PLAN", "columns中不能包含重复列");
+            }
+        }
+        return DbResult.ok(null);
+    }
+
+    // 校验Update赋值数组中的目标列和表达式字段
+    private DbResult<Void> validateAssignments(Object value) {
+        if (!(value instanceof List<?> list) || list.isEmpty()) {
+            return failure("EXECUTOR_INVALID_PLAN", "assignments必须是非空数组");
+        }
+        Set<String> columns = new HashSet<>();
+        for (Object item : list) {
+            if (!(item instanceof Map<?, ?> map)
+                    || !(map.get("column") instanceof String column)
+                    || column.isBlank()
+                    || !map.containsKey("value")
+                    || !(map.get("value") instanceof Map<?, ?> expression)
+                    || !(expression.get("kind") instanceof String kind)
+                    || kind.isBlank()) {
+                return failure("EXECUTOR_INVALID_PLAN", "assignments中的赋值定义无效");
+            }
+            if (!columns.add(column.toLowerCase(Locale.ROOT))) {
+                return failure("EXECUTOR_INVALID_PLAN", "assignments中不能重复赋值同一列");
+            }
+        }
+        return DbResult.ok(null);
+    }
+
+    // 校验Sort排序键数组中的列名和排序方向
+    private DbResult<Void> validateSortKeys(Object value) {
+        if (!(value instanceof List<?> list) || list.isEmpty()) {
+            return failure("EXECUTOR_INVALID_PLAN", "keys必须是非空数组");
+        }
+        for (Object item : list) {
+            if (!(item instanceof Map<?, ?> map)
+                    || !(map.get("column") instanceof String column)
+                    || column.isBlank()
+                    || !(map.get("direction") instanceof String direction)
+                    || !("ASC".equalsIgnoreCase(direction) || "DESC".equalsIgnoreCase(direction))) {
+                return failure("EXECUTOR_INVALID_PLAN", "Sort的排序键定义无效");
+            }
+        }
+        return DbResult.ok(null);
+    }
+
+    // 校验GroupBy聚合数组中的函数、目标列和别名
+    private DbResult<Void> validateAggregates(Object value) {
+        if (!(value instanceof List<?> list)) {
+            return failure("EXECUTOR_INVALID_PLAN", "aggregates必须是数组");
+        }
+        Set<String> aliases = new HashSet<>();
+        for (Object item : list) {
+            if (!(item instanceof Map<?, ?> map)
+                    || !(map.get("function") instanceof String function)
+                    || !("COUNT".equalsIgnoreCase(function) || "SUM".equalsIgnoreCase(function))
+                    || !(map.get("column") instanceof String column)
+                    || column.isBlank()
+                    || !(map.get("alias") instanceof String alias)
+                    || alias.isBlank()) {
+                return failure("EXECUTOR_INVALID_PLAN", "GroupBy的聚合定义无效");
+            }
+            if ("SUM".equalsIgnoreCase(function) && "*".equals(column)) {
+                return failure("EXECUTOR_INVALID_PLAN", "SUM不能使用星号列");
+            }
+            if (!aliases.add(alias.toLowerCase(Locale.ROOT))) {
+                return failure("EXECUTOR_INVALID_PLAN", "aggregates中不能包含重复别名");
             }
         }
         return DbResult.ok(null);
