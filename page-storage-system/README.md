@@ -1,121 +1,73 @@
-# ChainPage DB — Page Storage / OS Subsystem
+# ChainPage DB — Page Storage / OS Subsystem (Java 17)
 
-`page-storage-system` is the operating-system-oriented storage layer of ChainPage DB. It follows both the course requirements and `paged-storage-spec.md`, and exposes a JSON-compatible interface to the database Storage Engine.
+This directory is a pure Java implementation of the page-storage specification.
+Maven builds the library, runs JUnit tests, and creates a self-contained JSONL CLI jar.
 
-## Implemented scope
-
-### Core course requirements
-
-- **4KB paged file storage**: fixed-size page I/O, unique `pageId`, allocation/free and free-page reuse.
-- **Persistent page metadata**: allocation state survives restart.
-- **Buffer Pool**: cache hit/miss accounting, dirty-page write-back, explicit flush and eviction.
-- **Replacement policies**: LRU and FIFO, including runtime policy switching.
-- **Buffer event log**: `HIT / MISS / EVICT / FLUSH` events and counters.
-- **Table Page Map**: persistent `table -> pageId[]` mapping.
-- **Unified storage API**: Base64 page payloads and stable JSON success/error envelopes for database-engine integration.
-
-### Repository-required extensions (7–11)
-
-- **Slotted Page**: page header, stable slot IDs, free-space management, record insertion/read/deletion and compaction.
-- **B+ Tree index pages**: persistent internal/leaf pages, leaf links, exact/range lookup, insertion split, deletion borrow/merge and root collapse.
-- **WAL crash recovery**: durable before/after page images, write-ahead ordering, applied markers and startup redo of unflushed dirty pages.
-- **Page concurrency control**: shared READ locks, exclusive WRITE locks, owner validation and conflict reporting.
-
-## Architecture
-
-```text
-Database Storage Engine
-        |
-        v
-StorageManager  <---- JSON / Base64 boundary
-   |       |       |        |
-   |       |       |        +--> BPlusTreeManager
-   |       |       +-----------> SlottedPage
-   |       +-------------------> TablePageMap
-   v
-BufferPool ----> LRU / FIFO
-   |  |  \
-   |  |   +--> LockManager
-   |  +------> WALManager
-   v
-PageManager
-   v
-FileManager
-   v
-pages.dat
-```
-
-Persistent metadata/log files are stored beside `pages.dat`:
-
-```text
-page_allocation.json
-table_pages.json
-indexes.json
-wal.log
-```
-
-## Main JSON operations
-
-Core interface:
-
-```text
-get_page / write_page
-create_table_pages / drop_table_pages
-allocate_page_for_table / list_table_pages
-flush_page / flush_all / storage_stats
-```
-
-Extended interface:
-
-```text
-set_policy / buffer_events
-insert_record / read_record / delete_record / scan_records
-create_index / drop_index / index_search / index_range / index_insert / index_delete
-append_log / recover
-lock_page / unlock_page
-```
-
-`requestId` is preserved when supplied. Cross-module page data is Base64 and must decode to exactly 4096 bytes. Table names are normalized to lowercase.
-
-## Quick start
-
-Run tests from this directory:
+## Build and test
 
 ```bash
-PYTHONPATH=. pytest -q
+cd page-storage-system
+mvn clean test
+mvn package
 ```
 
-Python API:
+Requirements: JDK 17+ and Maven 3.9+. Runtime JSON support is Jackson 2.18.2;
+tests use JUnit 5.11.4. Run the CLI with:
 
-```python
-from storage import StorageManager
-
-store = StorageManager('./data', capacity=16, policy='LRU')
-store.create_table_pages('student')
-page_id = store.allocate_page_for_table('student')['pageId']
-row_id = store.insert_record(page_id, {'id': 1, 'name': 'Alice'})
-store.flush_all()
+```bash
+java -jar target/storage-cli.jar --root ./storage-data --capacity 16 --policy LRU
 ```
 
-JSON-compatible API:
+It reads one UTF-8 JSON request per line and writes one response per line.
 
-```python
-result = store.handle({
-    'requestId': 'req-0001',
-    'op': 'list_table_pages',
-    'table': 'student',
-})
+```text
+read_at / write_at / sync / allocate_page / free_page / read_page
+get_page / put_page / write_page / flush_page / flush_all / stats / storage_stats
+record_insert / record_access / choose_victim / set_policy / buffer_events
+create_table_pages / append_page / list_pages / allocate_page_for_table / list_table_pages / drop_table_pages
+insert_record / read_record / delete_record / delete_rows / scan_records
+create_index / drop_index / index_insert / index_delete / index_search / index_range
+append_log / recover / lock_page / unlock_page
 ```
 
-## Tests
+## Architecture and files
 
-`tests/test_storage.py` covers:
+```text
+StorageCli -> StorageManager
+  -> BufferPool -> LRU/FIFO + LockManager
+  -> PageManager -> FileManager -> pages.dat
+  -> TablePageMap
+  -> BPlusTree (page-backed nodes and linked leaves)
+  -> WalManager + AtomicCoordinator
+```
 
-- allocation/free/reuse and restart persistence;
-- LRU/FIFO behavior and runtime switching;
-- Base64 + error-envelope contract;
-- Slotted Page insert/read/delete/reuse;
-- shared/exclusive page locks;
-- WAL replay after a simulated crash;
-- B+ Tree split/search/range/delete/merge/restart;
-- unique and non-unique index behavior.
+Persistent files beside `pages.dat` are `page_allocation.json`,
+`table_pages.json`, `indexes.json`, `wal.log`, and `storage.lock`.
+`operation.undo` exists only while a compound operation is outstanding.
+
+## Durability and concurrency contract
+
+- Page writes use durable redo WAL. A complete JSONL record is forced before a
+  dirty frame reaches the page file. Recovery rejects corrupt complete records
+  and sequence gaps; only an unterminated final record is discarded.
+- Allocation generations prevent stale cache frames and old WAL records from
+  affecting a freed and reused page ID.
+- Table lifecycle and B+ tree mutations use a checksummed operation undo file.
+  Page/metadata before-images and the prior WAL offset are durable before
+  mutation. Resulting pages are flushed before commit. Startup restores an
+  unfinished operation before redo, and restoration survives another crash.
+- The public page WAL remains redo-only (`undone: 0`). Compound undo is an
+  internal consistency mechanism, not a general SQL transaction/txId rollback.
+- One process owns a storage directory (`STORAGE_BUSY` otherwise). Logical page
+  conflicts return `PAGE_LOCK_BUSY` or `{granted:false,wait:true}` for retry.
+- `close()` flushes and releases the directory. Reopening a path in one JVM
+  retires its older instance (`STORAGE_CLOSED` on later use).
+
+This implementation favors correctness for a course-sized database. Compound
+operations snapshot the entire page file, so their time, memory and temporary
+disk costs grow with database size. Serialized keys are limited to 1024 UTF-8
+bytes; overflow pages for one non-unique key's RowId list are not implemented.
+
+Files and replacement files are forced before success. Tests cover actual JVM
+termination, restart, malformed storage, and thread contention. They do not
+certify hardware power-loss behavior or disk-controller cache guarantees.
