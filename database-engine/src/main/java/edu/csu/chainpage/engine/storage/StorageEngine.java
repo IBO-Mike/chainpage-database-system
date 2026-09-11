@@ -83,6 +83,22 @@ public final class StorageEngine {
         return DbResult.ok(null);
     }
 
+    // 验证表页映射存在，并读取和解码该表的全部数据页
+    public DbResult<Void> verifyTable(String requestId, TableSchema schema) {
+        DbResult<Void> registered = registerTableSchema(requestId, schema);
+        if (!registered.isOk()) {
+            return registered;
+        }
+        DbResult<RowSet> scanned = scanRows(requestId, schema);
+        if (!scanned.isOk()) {
+            return DbResult.fail(scanned.error());
+        }
+        if (scanned.data() == null) {
+            return failure(requestId, "INVALID_STORAGE_RESPONSE", "存储验证未返回表行集", null);
+        }
+        return DbResult.ok(null);
+    }
+
     // 创建表的空页映射，建表阶段不提前分配数据页
     public DbResult<TablePages> createTableStorage(String requestId, TableSchema schema) {
         if (schema == null) {

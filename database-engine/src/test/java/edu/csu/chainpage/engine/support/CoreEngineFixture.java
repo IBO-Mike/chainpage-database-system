@@ -28,22 +28,22 @@ import edu.csu.chainpage.engine.plan.PlanNode;
 import edu.csu.chainpage.engine.plan.PlanParser;
 import edu.csu.chainpage.engine.storage.StorageEngine;
 import edu.csu.chainpage.engine.lifecycle.DatabaseLifecycle;
+import edu.csu.chainpage.engine.lifecycle.RecoveryService;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 
 // 使用公开契约把模拟编译器、数据库入口、执行器和模拟页存储连接起来
 public final class CoreEngineFixture {
 
-    public final FakePageStorageClient pageStorageClient = new FakePageStorageClient();
+    public final FakePageStorageClient pageStorageClient;
     public final FakeSqlCompilerClient compilerClient = new FakeSqlCompilerClient();
-    public final StorageEngine storageEngine = new StorageEngine(pageStorageClient);
-    public final SystemCatalogManager catalogManager = new SystemCatalogManager(
-            new StorageCatalogRepository(storageEngine)
-    );
+    public final StorageEngine storageEngine;
+    public final SystemCatalogManager catalogManager;
     public final PlanDispatcher dispatcher = new PlanDispatcher();
     public final DatabaseLifecycle lifecycle;
     public final DatabaseApi databaseApi;
@@ -52,14 +52,25 @@ public final class CoreEngineFixture {
 
     // 创建并启动一套只依赖公开接口的核心数据库夹具
     public CoreEngineFixture() {
+        this(new FakePageStorageClient());
+    }
+
+    // 使用可保留状态的页式存储创建并启动全新的数据库引擎对象
+    public CoreEngineFixture(FakePageStorageClient pageStorageClient) {
+        this.pageStorageClient = Objects.requireNonNull(
+                pageStorageClient,
+                "pageStorageClient cannot be null"
+        );
+        storageEngine = new StorageEngine(pageStorageClient);
+        catalogManager = new SystemCatalogManager(new StorageCatalogRepository(storageEngine));
         registerExecutors();
         lifecycle = new DatabaseLifecycle(
-                requestId -> {
+                new RecoveryService(requestId -> {
                     DbResult<Void> initialized = catalogManager.initialize(requestId);
                     return initialized.isOk()
                             ? DbResult.ok(catalogManager.snapshot())
                             : DbResult.fail(initialized.error());
-                },
+                }, storageEngine),
                 pageStorageClient
         );
         databaseApi = new DatabaseApi(

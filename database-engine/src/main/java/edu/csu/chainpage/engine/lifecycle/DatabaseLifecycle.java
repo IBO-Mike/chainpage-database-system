@@ -11,6 +11,7 @@ import java.util.Objects;
 public final class DatabaseLifecycle {
 
     private final CatalogLoader catalogLoader; // 系统目录加载器
+    private final RecoveryService recoveryService; // 数据库重启恢复服务
     private final PageStorageClient pageStorageClient; // 页式存储客户端
     private boolean ready; // 当前是否可以接受SQL请求
 
@@ -19,14 +20,34 @@ public final class DatabaseLifecycle {
             CatalogLoader catalogLoader,
             PageStorageClient pageStorageClient) {
         this.catalogLoader = Objects.requireNonNull(catalogLoader, "catalogLoader cannot be null");
+        this.recoveryService = null;
+        this.pageStorageClient = Objects.requireNonNull(pageStorageClient, "pageStorageClient cannot be null");
+    }
+
+    // 创建启动时会验证全部持久化表数据的生命周期管理器
+    public DatabaseLifecycle(
+            RecoveryService recoveryService,
+            PageStorageClient pageStorageClient) {
+        this.catalogLoader = null;
+        this.recoveryService = Objects.requireNonNull(recoveryService, "recoveryService cannot be null");
         this.pageStorageClient = Objects.requireNonNull(pageStorageClient, "pageStorageClient cannot be null");
     }
 
     // 加载目录并使数据库进入就绪状态
     public synchronized DbResult<StartupResult> startup(String requestId) {
+        ready = false;
+        if (recoveryService != null) {
+            DbResult<java.util.List<edu.csu.chainpage.engine.contract.TableSchema>> recoveryResult =
+                    recoveryService.recover(requestId);
+            if (!recoveryResult.isOk()) {
+                return DbResult.fail(recoveryResult.error());
+            }
+            ready = true;
+            return DbResult.ok(new StartupResult(recoveryResult.data(), true));
+        }
+
         DbResult<CatalogSnapshot> loadResult = catalogLoader.load(requestId);
         if (!loadResult.isOk()) {
-            ready = false;
             return DbResult.fail(loadResult.error());
         }
 
