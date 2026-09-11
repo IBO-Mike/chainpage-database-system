@@ -1,2 +1,4 @@
 docs/
 database-engine/docs-mike/
+.DS_Store
+**/target/
