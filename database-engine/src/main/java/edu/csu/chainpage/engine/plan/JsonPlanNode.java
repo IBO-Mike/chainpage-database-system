@@ -1,5 +1,6 @@
 package edu.csu.chainpage.engine.plan;
 
+import com.fasterxml.jackson.annotation.JsonValue;
 import edu.csu.chainpage.engine.contract.ColumnSchema;
 
 import java.util.ArrayList;
@@ -42,6 +43,12 @@ public final class JsonPlanNode implements PlanNode {
 
     // 返回完整字段的只读视图
     public Map<String, Object> fields() {
+        return fields;
+    }
+
+    // 按编译器原始计划字段序列化该节点
+    @JsonValue
+    public Map<String, Object> toJson() {
         return fields;
     }
 

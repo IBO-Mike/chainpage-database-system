@@ -5,6 +5,8 @@ import edu.csu.chainpage.engine.contract.CatalogSnapshot;
 import edu.csu.chainpage.engine.contract.CompileRequest;
 import edu.csu.chainpage.engine.contract.CompileResponse;
 import edu.csu.chainpage.engine.contract.CompiledStatement;
+import edu.csu.chainpage.engine.explain.ExplainResult;
+import edu.csu.chainpage.engine.explain.ExplainService;
 import edu.csu.chainpage.engine.lifecycle.DatabaseLifecycle;
 import edu.csu.chainpage.engine.plan.OptimizedExecutionRequest;
 import edu.csu.chainpage.engine.plan.OptimizedExecutionResult;
@@ -22,6 +24,7 @@ public final class DatabaseApi {
     private final edu.csu.chainpage.engine.contract.SqlCompilerClient compilerClient; // SQL编译器客户端
     private final StatementExecutor statementExecutor; // 计划执行器
     private final OptimizedPlanExecutor optimizedPlanExecutor; // 优化计划执行器
+    private final ExplainService explainService; // EXPLAIN请求服务
 
     // 创建数据库API
     public DatabaseApi(
@@ -39,11 +42,30 @@ public final class DatabaseApi {
             edu.csu.chainpage.engine.contract.SqlCompilerClient compilerClient,
             StatementExecutor statementExecutor,
             OptimizedPlanExecutor optimizedPlanExecutor) {
+        this(
+                lifecycle,
+                snapshotProvider,
+                compilerClient,
+                statementExecutor,
+                optimizedPlanExecutor,
+                new ExplainService(snapshotProvider, compilerClient)
+        );
+    }
+
+    // 创建包含全部可替换依赖的数据库API
+    public DatabaseApi(
+            DatabaseLifecycle lifecycle,
+            CatalogSnapshotProvider snapshotProvider,
+            edu.csu.chainpage.engine.contract.SqlCompilerClient compilerClient,
+            StatementExecutor statementExecutor,
+            OptimizedPlanExecutor optimizedPlanExecutor,
+            ExplainService explainService) {
         this.lifecycle = Objects.requireNonNull(lifecycle, "lifecycle cannot be null");
         this.snapshotProvider = Objects.requireNonNull(snapshotProvider, "snapshotProvider cannot be null");
         this.compilerClient = Objects.requireNonNull(compilerClient, "compilerClient cannot be null");
         this.statementExecutor = Objects.requireNonNull(statementExecutor, "statementExecutor cannot be null");
         this.optimizedPlanExecutor = optimizedPlanExecutor;
+        this.explainService = Objects.requireNonNull(explainService, "explainService cannot be null");
     }
 
     // 提供优化执行器位于普通语句执行器之前的构造顺序
@@ -172,6 +194,29 @@ public final class DatabaseApi {
             ));
         }
         return optimizedPlanExecutor.execute(requestId, request);
+    }
+
+    // 验证并处理EXPLAIN请求，且不把计划交给任何执行器
+    public DbResult<ExplainResult> handleExplain(String requestId, String sql) {
+        DbResult<Void> validation = explainService.validateExplainInput(sql);
+        if (!validation.isOk()) {
+            return DbResult.fail(new edu.csu.chainpage.engine.common.DbError(
+                    requestId,
+                    validation.error().getStatementIndex(),
+                    validation.error().getStage(),
+                    validation.error().getCode(),
+                    validation.error().getMessage(),
+                    validation.error().getLine(),
+                    validation.error().getColumn(),
+                    validation.error().getPageId()
+            ));
+        }
+
+        DbResult<Void> ready = ensureReady(requestId);
+        if (!ready.isOk()) {
+            return DbResult.fail(ready.error());
+        }
+        return explainService.explain(requestId, sql);
     }
 
     // 检查数据库是否已经启动并处于就绪状态

@@ -68,9 +68,11 @@ public final class DatabaseCli {
     // 将数据库结果输出为统一JSON包络
     public void printResponse(
             PrintStream output,
-            DbResult<DatabaseResponse> response) {
+            DbResult<?> response) {
         Map<String, Object> envelope = new LinkedHashMap<>();
-        DatabaseResponse domainResponse = response.isOk() ? response.data() : null;
+        DatabaseResponse domainResponse = response.isOk() && response.data() instanceof DatabaseResponse value
+                ? value
+                : null;
         boolean partialFailure = domainResponse != null && domainResponse.getError() != null;
         envelope.put("ok", response.isOk() && !partialFailure);
         envelope.put(
@@ -87,9 +89,14 @@ public final class DatabaseCli {
     }
 
     // 解析一行JSON请求并交给数据库API处理
-    private DbResult<DatabaseResponse> handleLine(String line) {
+    private DbResult<?> handleLine(String line) {
         String requestId = nextRequestId();
         try {
+            Map<String, Object> fields = jsonCodec.readObject(line);
+            Object sql = fields.get("sql");
+            if (sql instanceof String text && isExplainSql(text)) {
+                return databaseApi.handleExplain(requestId, text);
+            }
             DatabaseRequest request = jsonCodec.read(line, DatabaseRequest.class);
             return databaseApi.handle(requestId, request);
         } catch (JsonCodecException exception) {
@@ -98,5 +105,14 @@ public final class DatabaseCli {
                     exception.getMessage()
             ));
         }
+    }
+
+    // 判断SQL是否以独立的EXPLAIN关键字开头
+    private boolean isExplainSql(String sql) {
+        String normalized = sql.stripLeading();
+        return normalized.regionMatches(true, 0, "EXPLAIN", 0, "EXPLAIN".length())
+                && (normalized.length() == "EXPLAIN".length()
+                || Character.isWhitespace(normalized.charAt("EXPLAIN".length()))
+                || normalized.charAt("EXPLAIN".length()) == ';');
     }
 }
