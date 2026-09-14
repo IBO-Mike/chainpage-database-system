@@ -1,5 +1,8 @@
 param([Parameter(Mandatory=$true)][string]$IntegrationCheckout)
 $ErrorActionPreference = 'Stop'
+git -C $IntegrationCheckout symbolic-ref --quiet HEAD | Out-Null
+if ($LASTEXITCODE -eq 0) { throw 'Use a detached integration checkout; branch checkouts are refused' }
+if ($LASTEXITCODE -ne 1) { throw 'Cannot verify the integration checkout' }
 # ddb0dd7's println assertion assumes LF. PrintStream uses the platform newline.
 # Change only the expected newline, in an isolated integration checkout.
 $file = Join-Path $IntegrationCheckout 'database-engine/src/test/java/edu/csu/chainpage/engine/api/DatabaseCliTest.java'

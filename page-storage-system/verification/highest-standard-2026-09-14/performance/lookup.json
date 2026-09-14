@@ -1,0 +1,42 @@
+{
+  "mode" : "lookup",
+  "note" : "Warm-up excluded; all results verified. Timings reflect one host and OS filesystem cache, not physical disk I/O.",
+  "samples" : [ {
+    "pageFileReads" : 896,
+    "nanos" : 202291200,
+    "queries" : 64,
+    "round" : 0,
+    "mode" : "scan"
+  }, {
+    "pageFileReads" : 896,
+    "nanos" : 226877800,
+    "queries" : 64,
+    "round" : 1,
+    "mode" : "scan"
+  }, {
+    "pageFileReads" : 896,
+    "nanos" : 177109900,
+    "queries" : 64,
+    "round" : 2,
+    "mode" : "scan"
+  }, {
+    "pageFileReads" : 181,
+    "nanos" : 57997500,
+    "queries" : 64,
+    "round" : 0,
+    "mode" : "index"
+  }, {
+    "pageFileReads" : 181,
+    "nanos" : 43725100,
+    "queries" : 64,
+    "round" : 1,
+    "mode" : "index"
+  }, {
+    "pageFileReads" : 181,
+    "nanos" : 48219300,
+    "queries" : 64,
+    "round" : 2,
+    "mode" : "index"
+  } ],
+  "version" : "c2f7309dbf4ddeef1688476d4b232176bd74bf87"
+}

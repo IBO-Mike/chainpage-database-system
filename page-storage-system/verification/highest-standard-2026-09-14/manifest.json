@@ -1,0 +1,36 @@
+{
+  "osRevision": "c2f7309dbf4ddeef1688476d4b232176bd74bf87",
+  "upperRevision": "0efbb25175ea94bcfd28c8fbaabe16712d43bbf6",
+  "sourceSha256": {
+    "src/main/java/org/chainpage/storage/AtomicCoordinator.java": "7c55694c2ec3bb68b07a3b8f5fedfde093f71b5af91277f206cac1674434d271",
+    "src/main/java/org/chainpage/storage/BPlusTree.java": "179469f708133a6227e45386ff4b4c0fd45da9448783fcf40eb36c82331c28e9",
+    "src/main/java/org/chainpage/storage/BufferPool.java": "ecd96842dd461f54a310119a8e412acef655503523cb3dcca0b5835bda11c1d7",
+    "src/main/java/org/chainpage/storage/CrashHooks.java": "1e58d1f648db61112f43bdfd663ac14e2b3b3a678655e48423ae09d06834f832",
+    "src/main/java/org/chainpage/storage/DirectoryLease.java": "880f8146d76fe0f8f8ddd3bbb5e7b1303b2926590115b8df58183e2fad0eb82a",
+    "src/main/java/org/chainpage/storage/FileManager.java": "f1b8018911345dc8fe8e0d1a6fd3d3a7f90867dd28206d3569e7f1952dab3d0a",
+    "src/main/java/org/chainpage/storage/JsonFiles.java": "fbd2e1d538afc31efcbfea995872afa18049f3c5046afbade621b12244a2581b",
+    "src/main/java/org/chainpage/storage/LockManager.java": "142102b9318f004441afdbebd16929e43b41a106b8edb2b8619e35dec127f262",
+    "src/main/java/org/chainpage/storage/PageManager.java": "0abfd6119338aaf76b56ad0ee1c99dcb9818ffa45913659f80ed4a9e17b9b3fd",
+    "src/main/java/org/chainpage/storage/ReplacementPolicy.java": "7ae1fe9b199c6f2a67c18ce1880064a6943517b64288e0192c982079622f39a3",
+    "src/main/java/org/chainpage/storage/SlottedPage.java": "91584a36b42c34730fb51572f9d72a7b1e5efd0a25f25420dfd54be9cbfb744e",
+    "src/main/java/org/chainpage/storage/StorageCli.java": "deada35901cc71596fafb43908297c1b3700ffad87154c92e5ac09d0f4dc2db0",
+    "src/main/java/org/chainpage/storage/StorageException.java": "a3d0435241d5ed0bcb554b3ad125d4cda0567e4f39d1c4bfe041bc2a8de964b1",
+    "src/main/java/org/chainpage/storage/StorageManager.java": "8c1f08451001d550af9613afe30672058275d178bce260b6fb533bbdeab67372",
+    "src/main/java/org/chainpage/storage/TablePageMap.java": "f422c78ffb6704b4bf0a2ac1a6322103cc02f4b0c53ce3b99c99348beace29bc",
+    "src/main/java/org/chainpage/storage/WalManager.java": "55954fc558728a7ec263d4a5bcf28c6bad428e55cff4168d6bad8ff09f58e5fe",
+    "src/test/java/org/chainpage/storage/AdvancedVerificationTest.java": "3cffa573cbe52e96be72a9a6da74da108aeb4572cd53c0e068cdc55ae53ffafb",
+    "src/test/java/org/chainpage/storage/CrashHarness.java": "4a4f6ca7ffb37a7f57331eeefdcc0f4c6449ea2aaafc9c7b4cac79ed624e9fe0",
+    "src/test/java/org/chainpage/storage/CrashRecoveryTest.java": "cf4c1e1f15e46db6b5591ac83c5e9b0905e9a8fe704795002f0ba1e6f8f3fdfd",
+    "src/test/java/org/chainpage/storage/HighestStandardTest.java": "fb66dbca8c1a83174689bfbed99563e4d824c15ae8dcd7dbadca628771b49d26",
+    "src/test/java/org/chainpage/storage/LeaseHarness.java": "3b5fb7451f3390c3e6fe07e5408b298a870e9873fd434b4c9434d45b06cf3775",
+    "src/test/java/org/chainpage/storage/RubricAcceptanceTest.java": "4b01bd76b71fc118e5497399a8834866042179b80978b9123121573ee76869ec",
+    "src/test/java/org/chainpage/storage/StorageSystemTest.java": "65c1f23726cd14bd9b348eed5601dfdf4ef416bdf9a905db13be9165ba05eef2"
+  },
+  "baselineJarSha256": "bedad801fd09b9966a248fca2f4ca3583bf73a9cc98545bd100d47d6c142eae1",
+  "improvedJarSha256": "38f49a2d71d326effd478d784fb822de56f0ecad4464456d6a3b50e110d5563f",
+  "experimentSourceSha256Lf": "bbe710a24c3c7a84dba085b8a98fc8318ca24d9932483b00f42ec426a030c028",
+  "versionLabels": {
+    "89ed0c4": "89ed0c458d911c8001115174af1dd8d02c25cbc7",
+    "highest-standard": "c2f7309dbf4ddeef1688476d4b232176bd74bf87"
+  }
+}

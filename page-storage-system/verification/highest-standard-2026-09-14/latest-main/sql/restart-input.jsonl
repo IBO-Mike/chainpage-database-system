@@ -1,0 +1,3 @@
+SELECT * FROM student;
+INSERT INTO student(id,name,age) VALUES (3,'Carol',22);
+SELECT id,name FROM student WHERE age>18;

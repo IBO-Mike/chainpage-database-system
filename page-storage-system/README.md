@@ -30,10 +30,18 @@ It reads one UTF-8 JSON request per line and writes one response per line.
   and work that still requires a personal demonstration.
 - [Real-module SQL integration](OS-INTEGRATION.md): pinned main and OS revisions,
   full reactor tests, actual database CLI requests and cross-JVM restart evidence.
+- [Performance evidence](OS-PERFORMANCE.md): baseline versus incremental index updates,
+  four cache workloads and full-row index lookup versus table scan.
 
 Run `mvn -B -Dtest=RubricAcceptanceTest test` for the seven focused cases, or
 `mvn -B clean verify` for the full suite and CLI jar. The comparison writes
 `target/rubric-cache-comparison.json`; elapsed times are observations, not pass criteria.
+
+The highest-tier improvements add incremental B+ tree insertion, local unique-INT deletion,
+CLOCK, coherent direct writes, checksummed WAL records and a manual atomic checkpoint.
+`mvn -B -Dtest=HighestStandardTest test` runs the 14 additional correctness cases.
+The real three-module CI uses pinned main `ddb0dd7`, explicit JSON output and an isolated
+platform-newline test correction; see OS-INTEGRATION.md for the exact combination.
 
 ```text
 read_at / write_at / sync / allocate_page / free_page / read_page
@@ -42,14 +50,14 @@ record_insert / record_access / choose_victim / set_policy / buffer_events
 create_table_pages / append_page / list_pages / allocate_page_for_table / list_table_pages / drop_table_pages
 insert_record / read_record / delete_record / delete_rows / scan_records
 create_index / drop_index / index_insert / index_delete / index_search / index_range
-append_log / recover / lock_page / unlock_page
+append_log / recover / checkpoint / lock_page / unlock_page
 ```
 
 ## Architecture and files
 
 ```text
 StorageCli -> StorageManager
-  -> BufferPool -> LRU/FIFO + LockManager
+  -> BufferPool -> LRU/FIFO/CLOCK + LockManager
   -> PageManager -> FileManager -> pages.dat
   -> TablePageMap
   -> BPlusTree (page-backed nodes and linked leaves)

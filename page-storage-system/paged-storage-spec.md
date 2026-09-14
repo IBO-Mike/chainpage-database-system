@@ -248,3 +248,11 @@ Table Page Map 是“表到页号的目录”。它让存储引擎知道一张�
 
 ### 实现说明
 为每页维护读者集合和写者；Buffer Pool 的读、写、刷盘分别在正确的锁范围内执行，最后通过 unlock 释放。
+
+## 实现的兼容扩展（2026-09-14）
+
+- `set_policy` 和 CLI `--policy` 支持 `CLOCK`，原有 LRU/FIFO 字段保持兼容。
+- `checkpoint({"op":"checkpoint","requestId":任意JSON值})` 使用标准响应包络；data 为 `checkpointSeq/beforeBytes/afterBytes/reclaimedBytes`。先刷新并恢复所有页，再原子压缩 WAL；checkpointSeq 为最后 UPDATE 序号，压缩后序号不重置。
+- `stats` 增加 `walBytes` 与 `nextLogSeq`；其余统计字段保留。
+- 新 WAL 记录有 `sha256`，旧记录仍可读取；SHA-256 用于检测完整记录损坏，不提供对恶意篡改的认证。
+- `write_at` 保留同步整页写入语义，同时尊重页锁、执行 WAL 顺序并使驻留缓存失效。正常缓存读取不会返回直接写之前的旧副本。

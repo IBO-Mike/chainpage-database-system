@@ -54,3 +54,20 @@ elapsedNanos 记录实际耗时，但包含测试断言、数据比较、JVM 执
 ## 已完成真实三模块联调
 
 使用最新 main 的编译器、引擎和适配器，在独立 detached worktree 中配合 OS 分支版本，完成根 Maven clean verify 的 212 项测试。verification/verify-sql-integration.ps1 对真实数据库 jar 执行 CREATE、INSERT、SELECT、DELETE、compile 和错误请求，并以第二 JVM 验证重启后表结构、删除结果和后续读写。版本、预期值、实际响应与复现步骤见 OS-INTEGRATION.md。
+
+## 最高档补强验收（最新结果以评分报告为准）
+
+新增 HighestStandardTest 的 14 项验证；原有 39 项继续保留。
+
+| 检查项 | 独立预期与验证内容 |
+|---|---|
+| CLOCK | 固定候选子集、引用位第二机会、淘汰后的环状态 |
+| 缓存模型 | 每种策略 350 次混合读写、直接写和淘汰，与独立字节模型逐次比较；checkpoint 和重启后全部页一致 |
+| 直接写与恢复 | dirty 帧不会覆盖新直接写；外部 READ 锁阻止直接写；显式 REDO 后不读旧缓存 |
+| checkpoint | 20 次更新压缩、未刷页 REDO、连续序号重开、重复压缩、锁冲突时保留日志 |
+| checkpoint 崩溃 | 在原子替换前/后分别 halt 两个 JVM，再重开核对数据与序号 |
+| 增量 B+ 树 | 350 个乱序键构成至少三层树，200 次随机删除及重启后继续删除；逐次比较独立 TreeMap，验证路由、占用、双向叶链和根收缩 |
+| 严格元数据 | 重复 JSON 字段、null/fractional root、负数溢出、索引页/表页共享均拒绝 |
+| WAL 校验 | 修改合法 Base64 页图像且保持 JSON 结构有效，SHA-256 仍检测损坏 |
+
+原 crash 矩阵的索引删除准备改为真实触发合并与释放的树状态；没有移除 page_free 崩溃点或放宽断言。旧缓存对比是历史基准；最高档实验增加预热、多轮和四种工作负载，并提供优化前后同结果的索引变更、索引取完整记录与扫描对比，见 OS-PERFORMANCE.md。

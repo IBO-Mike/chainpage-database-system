@@ -1,5 +1,7 @@
 # OS / Page Storage Java 验证报告
 
+本文保留早期 Java 重写验证的历史记录。当前最高档补强、真实上层联调、测试数量和性能数据请以 [评分逐项报告](OS-RUBRIC-REPORT.md)、[实际联调报告](OS-INTEGRATION.md) 和 [性能实验](OS-PERFORMANCE.md) 为准。
+
 验证对象：`IBO-Mike/chainpage-database-system` 的 `os-storage-core` 分支，基线提交 `7a4198f117f6716b35256531dd905e554badedca`。验证环境为 Windows 11、Temurin OpenJDK 17.0.20.1、Maven 3.9.16。本次按要求将 `page-storage-system` 统一重写为 Java 17；Python 源码和 Python 测试已移除。
 
 # 总体结论

@@ -2,11 +2,20 @@
 
 检查日期为 2026 年 9 月 14 日。评分依据为《大型平台软件设计实习评分-2026.docx》。检查对象为 IBO-Mike/chainpage-database-system 的 os-storage-core 分支，修改前基线为 20d7f17ce21102aa081c36579687d0362b3de987。
 
-OS 存储核心能力已有实现，失败写入路径、预设验收、缓存对比和设计说明已补齐。补充检查发现最新 main 已有真实上层代码，现已在独立目录中将其与 OS 分支组合，完成全量测试、实际 SQL CLI 和跨 JVM 重启验证。个人现场能力仍需本人展示。本文不预估老师最终分数；“已验证”表示有当前运行证据，“材料已补齐”不等于个人答辩或贡献归属已验收。
+按最高档标准补强了 OS 算法、可靠性、真实集成、性能对比与工程材料。当前 OS 53 项、最新 main 三模块共 239 项测试通过，实际 SQL CLI 与跨 JVM 重启通过。个人现场能力仍需本人展示。本文不预估老师最终分数；“已验证”表示有当前运行证据，“材料已补齐”不等于个人答辩或贡献归属已验收。
 
-真实上层版本为 main 的 0efbb25175ea94bcfd28c8fbaabe16712d43bbf6，OS 代码版本为 d0c4a4c3e5aec8a7271817db7a454ce30a012338。联调方法、结果和原始证据见 OS-INTEGRATION.md。没有修改 main 或合并 PR，OS 分支也未纳入上层源代码。
+前次真实上层版本为 main 的 0efbb25175ea94bcfd28c8fbaabe16712d43bbf6；最终补验当前 main ddb0dd7ca677da64f7b65f101a22402826fa81f7，前次 OS 代码版本为 d0c4a4c3e5aec8a7271817db7a454ce30a012338；最高档补强版本为包含本文的提交。联调方法、结果和原始证据见 OS-INTEGRATION.md。没有修改 main 或合并 PR，OS 分支也未纳入上层源代码。
 
-## 本次实际完成的改动
+## 最高档补强完成情况
+
+- B+ 树插入改为递归局部分裂，唯一 INT 删除实现借位、合并、根收缩；保持原节点文件格式。
+- 增加 CLOCK、直接写缓存一致性和页锁、显式恢复缓存失效。
+- 增加带连续序号的原子 WAL checkpoint、新日志 SHA-256、严格 JSON/整数校验及分配代数耗尽保护。
+- 复合恢复在替换文件前完整校验 undo，重新加载前清理旧帧；Windows 临时访问拒绝使用有限重试。
+- 新增 14 项自动验收，含两个 checkpoint 崩溃子进程、三策略随机字节模型和独立 TreeMap 索引模型。
+- 新增同输入/同结果的基线比较、四缓存负载、索引取完整记录与扫描实验，以及 Ubuntu/Windows 三模块 CI。CI 实际结果另列，不把配置文件当作运行通过。
+
+## 前期实际完成的改动（历史记录）
 
 1. 修正 BufferPool.putPage：校验负 txId 后才进入缓存修改；UPDATE 日志持久化成功后才发布新缓存字节，避免 WAL 失败留下未记录的脏页。
 2. 新增 RubricAcceptanceTest，共 7 项预设测试，覆盖非法事务号、日志失败、固定替换序列、dirty 淘汰回写、真实 JSONL CLI 重启和缓存对比。
@@ -22,7 +31,7 @@ OS 存储核心能力已有实现，失败写入路径、预设验收、缓存�
 | 评分项 | 分值 | 完成状态 | 实现及当前依据 |
 |---|---:|---|---|
 | 页式存储管理 | 4 | 已验证 | FileManager/PageManager 实现整页读写、分配、释放、清零复用和持久化；现有测试验证重开数据和分配状态；WAL 与真实崩溃测试验证恢复 |
-| 缓存机制 | 4 | 已验证 | BufferPool 与 ReplacementPolicy 实现 LRU/FIFO、hit/miss、dirty、flush 和淘汰；新增 A B A C 固定序列精确断言 victim、计数及回写顺序 |
+| 缓存机制 | 4 | 已验证 | BufferPool 与 ReplacementPolicy 实现 LRU/FIFO/CLOCK、hit/miss、dirty、flush 和淘汰；新增 A B A C 固定序列精确断言 victim、计数及回写顺序 |
 | 接口与集成 | 4 | 已验证 | get_page/write_page 等统一接口通过；最新 main 的真实数据库适配器连接 OS 分支实现，实际 SQL CLI 与跨 JVM 重启通过；原始证据见 OS-INTEGRATION.md |
 
 页管理预设用例覆盖分配 0/1、释放并复用零页、页 1 数据重启读取、非法页与长度、被表/索引引用的页不能释放。恢复包含未刷盘 UPDATE 的 REDO、旧 generation 的过滤、完整损坏日志拒绝、末尾半记录截断和恢复中再次崩溃。
@@ -42,7 +51,7 @@ OS 存储核心能力已有实现，失败写入路径、预设验收、缓存�
 
 | 评分项 | 分值 | 本次情况 |
 |---|---:|---|
-| 执行引擎 | 4 | 未修改；使用最新 main 的实际引擎，核心 SQL、筛选与投影结果符合预期，引擎 162 项测试通过 |
+| 执行引擎 | 4 | 未修改；使用最新 main 的实际引擎，核心 SQL、筛选与投影结果符合预期，引擎最终 175 项测试通过 |
 | 存储引擎与目录 | 4 | 真实上层 StorageEngine/Catalog 经 OS 接口持久化；跨页、记录和重启测试通过，第二 JVM 可读取原表结构和数据 |
 | 系统集成 | 4 | 完整 SQL 输入到编译、执行、存储、返回已运行；11 个 CLI 请求覆盖核心操作、缺表错误、重启后查询与插入 |
 
@@ -53,10 +62,10 @@ OS 存储核心能力已有实现，失败写入路径、预设验收、缓存�
 | 检查点 | 完成情况 |
 |---|---|
 | 功能完整实现 | 页、缓存、表页映射、记录槽、页式索引、WAL、复合恢复和页锁均有实现与测试；不声称达到生产级数据库功能完整性 |
-| 稳定运行 | 当前 Windows 环境 Maven clean verify 成功，39 项测试全部通过，CLI 可构建与跨进程运行 |
+| 稳定运行 | 当前 Windows 环境 Maven clean verify 成功，53 项测试全部通过，CLI 可构建与跨进程运行 |
 | 边界与异常 | 覆盖页号/长度/字段错误、所有权冲突、记录空间不足、删除槽、重复键、锁冲突和损坏日志；本次增加负 txId 和 WAL 追加失败回归 |
 | 其他模块接口连接 | OS 边界、真实数据库 PageStorageModuleClient 适配器和 SQL CLI 链路已验证，版本和证据已保存 |
-| 未完成及明显缺陷 | 修正已定位的失败写入缺陷；整树重建、全文件 undo、无 checkpoint 等限制明确记录，不标记为已解决 |
+| 未完成及明显缺陷 | 修正已定位的失败写入缺陷；已补增量插入、唯一 INT 删除局部重平衡、手动 checkpoint；变长/非唯一删除回退及全文件 undo 仍明确记录 |
 
 ### 对负责模块的熟悉程度 15 分
 
@@ -64,8 +73,8 @@ OS 存储核心能力已有实现，失败写入路径、预设验收、缓存�
 |---|---|
 | 模块解决什么问题 | OS-DESIGN 的目标与边界：将记录操作落实为页 I/O 并缓存常用页；本人需清楚口述 |
 | 设计思路与运行流程 | 给出读、写、淘汰、分配、索引与启动恢复顺序；本人需沿代码解释 |
-| 类函数与数据结构 | 给出 12 个主要模块和集合/文件对照；本人需定位 getPage、putPage、flushFrame、rebuild、operation、recover |
-| 核心算法或逻辑 | 解释 LRU/FIFO、槽布局、B+ 树整树重建、REDO 高水位和 generation；本人需说明设计取舍 |
+| 类函数与数据结构 | 给出 12 个主要模块和集合/文件对照；本人需定位 getPage、putPage、flushFrame、insertNode、deleteNode、rebuild、operation、recover、checkpoint |
+| 核心算法或逻辑 | 解释 LRU/FIFO/CLOCK、槽布局、B+ 树局部分裂/借位/合并和回退、REDO 高水位、checkpoint 和 generation；本人需说明设计取舍 |
 | 与其他模块交互 | 已说明 Java facade、JSONL 字段、实际编译器和数据库适配器调用链；真实模块联调已完成，本人仍需口述 |
 | 遇到的问题及解决方法 | 本次负 txId/WAL 失败路径有可复现测试；历史恢复问题可按已有代码和测试解释，不把历史报告直接当作本人经历 |
 | 修改代码的影响 | 增加容量、访问顺序、日志发布和 generation 的练习；本人需先预测结果再运行 |
@@ -86,7 +95,7 @@ OS 存储核心能力已有实现，失败写入路径、预设验收、缓存�
 | 检查点 | 完成情况 |
 |---|---|
 | Git 提交规范 | 沿用 os-storage-core，按明确范围提交，可从提交 diff 复核；不修改 main 或合并 PR |
-| 结构与接口合理 | 保留现有分层和字段，不引入跨模块框架；失败路径修正集中于 BufferPool |
+| 结构与接口合理 | 保留现有分层和字段，不引入跨模块框架；缓存一致性修正集中于 BufferPool/StorageManager；局部树算法保留原页格式 |
 | 注释和开发文档 | 已有核心类注释；本次增加设计、验收、评分对应报告与 README 入口 |
 | 与成员联调 | 真实成员模块代码已组合验证；与成员现场沟通及个人协作表现仍需实际展示 |
 | 接口冲突和集成问题 | 实际适配器、核心 SQL、错误、跨页和重启验证通过，未发现需改动生产适配器的冲突；不能推广到所有未来版本 |
@@ -95,10 +104,10 @@ OS 存储核心能力已有实现，失败写入路径、预设验收、缓存�
 
 | 候选亮点 | 当前实现和证据 | 应诚实说明的限制 |
 |---|---|---|
-| 页式 B+ 树 | 点查、范围查、唯一/非唯一索引、页节点与叶链；多层树和删除后根收缩测试 | 变更整树重建，未验证相对扫描的性能收益；单 key 的 RowId overflow 未实现 |
-| WAL 和故障恢复 | 强制持久化 UPDATE，APPLIED 标记，generation 过滤；真实 JVM halt 和二次恢复测试 | REDO-only；复合 undo 不是通用 SQL 事务，WAL 无 checkpoint |
+| 页式 B+ 树 | 点查、范围查、唯一/非唯一索引、页节点与叶链；多层树和删除后根收缩测试 | 插入增量分裂；唯一 INT 删除局部重平衡；优化前后及扫描对比见 OS-PERFORMANCE；变长/非唯一删除仍重建，单 key RowId overflow 未实现 |
+| WAL 和故障恢复 | 强制持久化 UPDATE，APPLIED 标记，generation 过滤；真实 JVM halt 和二次恢复测试 | REDO-only；手动原子 checkpoint 和新日志 SHA-256 已实现；复合 undo 不是通用 SQL 事务 |
 | 并发控制 | owner 读写锁、重入、冲突拒绝、跨 JVM 目录互斥 | facade 串行，无 MVCC、公平队列或死锁检测 |
-| 缓存对比与自动验收 | 同序列 DIRECT/FIFO/LRU 的读取次数和实际耗时产物；7 项新预设验收 | 对比现有模式，不是优化前后代码版本；结果与访问模式有关 |
+| CLOCK 与测量证据 | 循环链表、引用位和候选过滤；四负载 DIRECT/FIFO/LRU/CLOCK 共 48 个有效样本；索引优化前后和扫描比较 | 缓存策略优劣随负载变化；单机耗时不能等同硬件 I/O；索引更新实验只覆盖唯一 INT |
 
 这些功能可作为候选展示。仓库自己的 paged-storage-spec.md 把部分功能标为必做，课程评分标准又把 B+ 树、WAL、并发等列为典型亮点：它们是否算本组的额外创新、主要完成者是谁，需要结合教师要求和实际分工确认。本次不擅自修改基础任务定义、不增加未经确认的事务或分布式功能，也不承诺创新分数。
 
@@ -109,13 +118,33 @@ OS 存储核心能力已有实现，失败写入路径、预设验收、缓存�
 | 评分项 | 分值 | 本次补齐情况 |
 |---|---:|---|
 | 内容完整性 | 3 | OS 设计、职责、实现、验收、总体联调和当前结果已记录；正式个人分工需按事实填写 |
-| 技术描述 | 3 | 解释页偏移、Java 集合、dirty 与 WAL 顺序、槽目录、索引重建和恢复机制，不把现有实现包装为增量树或完整事务 |
-| 测试与结果分析 | 2 | OS 39 项、三模块共 212 项及真实 SQL 跨进程结果已给出；缓存实验和验证边界均有分析 |
+| 技术描述 | 3 | 解释页偏移、Java 集合、dirty/WAL 顺序、槽目录、增量树/回退、CLOCK、checkpoint 和恢复机制；明确整体成本及事务边界 |
+| 测试与结果分析 | 2 | 最新 OS 53 项及三模块、真实 SQL 跨进程结果见下文；新增预热多轮、四负载缓存、索引变更前后和索引/扫描实验 |
 | 总结与规范性 | 2 | 总结失败写入原因、修正、回归和遗留限制；个人收获需本人填写，不虚构个人开发经历 |
 
 本人负责的范围应按实际分工填写为 OS 页式存储与缓存及确实承担的扩展。SQL 编译、执行计划、上层 Catalog 的实现由最新 main 提供，不应因本次联调而写成个人 OS 实现。
 
-## 当前测试结果与分析
+## 最新与历史测试结果
+
+最新最高档补强的 OS 独立 `mvn -B clean verify`：53 项，0 失败、0 错误、0 跳过，BUILD SUCCESS。最新三模块与 SQL、性能结果见下方的最终验证记录。以下早期 212 项和缓存耗时为历史记录，不代替最新结果。
+
+### 最终验证记录
+
+被测 OS core 提交 c2f7309dbf4ddeef1688476d4b232176bd74bf87，最终上层为 ddb0dd7ca677da64f7b65f101a22402826fa81f7。独立三模块根构建和 SQL JAR 均成功。最新上层有一个 println 测试固定 LF，在 Windows 失败；独立目录将预期换行改为 System.lineSeparator() 后全通过。仅改测试断言，main 与上层生产代码未改；修正和失败记录都保留。
+
+| 检查 | 最新实际结果 | 证据 |
+|---|---|---|
+| OS 独立构建 | 53 项，0 失败/错误/跳过 | verification/highest-standard-2026-09-14/maven-os.log |
+| 三模块根构建 | 编译器 11、OS 53、引擎 175，共 239 项，全部通过 | 同目录 latest-main/maven-summary.json 和 maven-final.log；旧 main 226 项也通过 |
+| 真实 SQL 与重启 | 11 请求、两个 JVM、全部按预期；缺表按预期失败 | 同目录 latest-main/sql/（显式 --json）；OS-INTEGRATION.md |
+| 索引更新对比 | 插入写页 688→155，减少 77.47%；删除 618→248，减少 59.87% | OS-PERFORMANCE.md 和同目录 performance/ 原始五轮数据 |
+| 索引取记录/扫描 | 相同 64 点查询，读页 896→181，减少 79.80% | 同目录 performance/lookup.json；包括读取完整记录 |
+| 多负载缓存 | 热点、顺序、随机、可驻留工作集；4 模式共 48 个有效样本 | 同目录 performance/cache.json；CLOCK 不宣称普遍优于 LRU |
+| 随机正确性 | 独立 TreeMap 和字节模型逐次核验，重启后保留一致 | HighestStandardTest，14 项全通过 |
+
+Ubuntu/Windows 远端 CI 均为 SUCCESS，验证提交 e682bf8512b2ed15cb3e7e4307d115e8fdf92ad6（core 仍为 c2f7309），包含最新 main 三模块构建、11 条真实 SQL 跨 JVM 验收及证据上传。[CI 运行记录](https://github.com/IBO-Mike/chainpage-database-system/actions/runs/34854368269)，状态原文保存在 latest-main/ci-result.json。早期一次上传路径失败及最新上层 Windows 换行断言失败均已修正并重新验证。
+
+性能计时受系统负载和文件缓存影响；以可重复写页/读页计数作为主要效果证据。完整条件、耗时中位数和局限均在 OS-PERFORMANCE.md。原始记录通过 manifest.json 的源码/JAR 摘要绑定被测版本。
 
 执行 `mvn -B clean verify`，环境为 Windows 11、Temurin OpenJDK 17.0.20.1、Maven 3.9.16。结果为 BUILD SUCCESS。
 
@@ -127,7 +156,8 @@ OS 存储核心能力已有实现，失败写入路径、预设验收、缓存�
 | AdvancedVerificationTest | 10 | 0 | 0 | 0 |
 | CrashRecoveryTest | 11 | 0 | 0 | 0 |
 | RubricAcceptanceTest | 7 | 0 | 0 | 0 |
-| 总计 | 39 | 0 | 0 | 0 |
+| HighestStandardTest | 14 | 0 | 0 | 0 |
+| 总计 | 53 | 0 | 0 | 0 |
 
 原有 32 项保持通过。本次专项测试最初发现缓存实验的 FIFO 预期值漏算首轮冷启动；按第一轮 5 miss、以后每轮 3 miss 校正为 302，复跑和最终全量构建均通过。这是实验预期修正，没有为了通过测试改动替换策略。
 
@@ -145,7 +175,7 @@ OS 存储核心能力已有实现，失败写入路径、预设验收、缓存�
 
 FIFO 相比直接读取减少 49.67% 页文件读取；LRU 减少 66.33%；LRU 相比 FIFO 减少 33.11%。给定序列热点 A 经常命中，LRU 保留它，FIFO 读命中不改变顺序，因此发生额外淘汰。
 
-耗时为单次本地运行观察，包含数据断言、JVM 与 OS 文件缓存影响，不能据此承诺固定加速比，也不能把页文件 read 次数等同于硬件 I/O。若要提交正式性能结论，应补充多轮预热、更多工作负载和索引/扫描同结果对比。
+耗时为单次本地运行观察，包含数据断言、JVM 与 OS 文件缓存影响，不能据此承诺固定加速比，也不能把页文件 read 次数等同于硬件 I/O。最高档补强已新增这些实验，原始数据、条件和分析见 OS-PERFORMANCE.md；本表保留前次历史观察。
 
 ### 失败写入问题与解决
 
@@ -156,12 +186,22 @@ FIFO 相比直接读取减少 49.67% 页文件读取；LRU 减少 66.33%；LRU �
 ## 不确定或缺少依据而未改的内容
 
 1. 完整 SQL 链路原先缺少检查依据，现已在最新 main 发现运行代码并完成隔离联调；无需修改生产适配器，证据见 OS-INTEGRATION.md。
-2. 增量 B+ 树、overflow page、WAL checkpoint：现有明确规模限制，但评分文件没有规定具体方案，改动较大，本次先记录而不重构。
+2. 已完成增量插入、唯一 INT 删除局部重平衡和手动 checkpoint；overflow page、变长/非唯一删除安全回退及全文件 undo 的规模限制仍保留。
 3. 通用 SQL 事务、MVCC、阻塞锁队列、分布式与 GUI：不是评分标准直接要求的 OS 修正，先不增加。
-4. 低层直接 I/O 与缓存混用契约：保留现有规约，说明上层统一走缓存路径，不擅改接口语义。
+4. 已修正直接写/显式恢复与缓存的一致性，保留原接口及整页语义；兼容扩展写入 paged-storage-spec.md。
 5. 个人姓名、独立贡献、创新归属、个人收获：未获实际信息，不能代写事实；由本人结合分工和 Git 记录填写。
 6. 创新是否超出基础任务：需教师确认，报告仅记录功能和证据，不认定加分。
 
 ## 建议验收展示顺序
 
 先运行 7 个专项用例，展示 A B A C 的两种 victim 和 dirty 回写；打开缓存对比 JSON；再展示 11 项真实崩溃恢复测试、B+ 树验证器和设计流程。运行 OS-INTEGRATION 的实际数据库 CLI 脚本展示 SQL 执行与第二 JVM 重启，并准备按 OS-DESIGN 的练习亲自解释关键逻辑。
+
+## 最高档补强改动文件
+
+- 核心 Java：AtomicCoordinator、BPlusTree、BufferPool、JsonFiles、PageManager、ReplacementPolicy、StorageCli、StorageManager、WalManager（均在 src/main/java/org/chainpage/storage）。
+- 自动测试：HighestStandardTest 新增；CrashHarness 和 CrashRecoveryTest 更新，以实际触发索引合并释放及 checkpoint halt。
+- 工程与复现：.github/workflows/storage-tests.yml；verification/StoragePerformanceExperiment.java、verify-performance.ps1、verify-sql-integration.ps1、apply-main-windows-test-fix.ps1。测试修正助手拒绝任何附着分支的检出，只允许 detached 联调目录。
+- 材料：OS-DESIGN、OS-ACCEPTANCE、OS-INTEGRATION、OS-PERFORMANCE、本文、README、paged-storage-spec 和历史 JAVA-VERIFICATION-REPORT 入口。
+- 原始证据：verification/highest-standard-2026-09-14/，包括最终/首次失败日志、每套测试计数、JSONL 请求响应、五轮索引更新、48 个缓存样本、六个索引/扫描样本、版本/摘要及 CI 状态。
+
+代码和材料留在 os-storage-core；未修改 main，未合并 PR。上层换行断言差异以脚本和 patch 保存，不提交上层模块生产源码。

@@ -1,5 +1,40 @@
 # OS 与真实数据库模块联调结果
 
+## 当前 main 组合及复现
+
+Ubuntu/Windows 远端 CI 均成功，运行 https://github.com/IBO-Mike/chainpage-database-system/actions/runs/34854368269 （e682bf8）。状态原文在 latest-main/ci-result.json。
+
+最终本地根构建 BUILD SUCCESS：编译器 11、OS 53、引擎 175，共 239 项，0 失败/错误/跳过。数据库 JAR 11 请求、两个 JVM 按预期。最新证据在 verification/highest-standard-2026-09-14/latest-main/。首次 Windows 换行断言失败日志也保留；不把调整后的测试说成未改动的原始上层测试。
+
+最终核对远端发现 main 已更新至 `ddb0dd7ca677da64f7b65f101a22402826fa81f7`（默认 HUMAN 输出）。本次额外验证这个版本，仍使用相同 OS core c2f7309；CLI 验收显式指定 `--json`，不修改上层生产代码。
+
+ddb0dd7 的 DatabaseCliTest 有一个固定 LF 的 println 断言，在 Windows 因实际 CRLF 失败。独立联调目录仅将此断言的预期改为 `System.lineSeparator()`；内容仍精确比较，没有删除、跳过或放宽测试。修正由 verification/apply-main-windows-test-fix.ps1 可重复应用，差异保存在 verification/highest-standard-2026-09-14/upstream-test-newline.patch。main 分支没有被修改。
+
+从 OS 检出目录执行，目录必须为新目录：
+
+```powershell
+git fetch origin main
+git worktree add --detach ../chainpage-current-check ddb0dd7ca677da64f7b65f101a22402826fa81f7
+git -C ../chainpage-current-check restore --source=os-storage-core --worktree -- page-storage-system
+./page-storage-system/verification/apply-main-windows-test-fix.ps1 -IntegrationCheckout ../chainpage-current-check
+```
+
+进入 ../chainpage-current-check 运行 `mvn -B clean verify`；回到 OS 检出目录运行：
+
+```powershell
+./page-storage-system/verification/verify-sql-integration.ps1 -DatabaseJar ../chainpage-current-check/database-engine/target/chainpage-db.jar -EvidenceDirectory ../current-check-evidence -CliArguments @('--json')
+```
+
+CI 在 Ubuntu/Windows 使用相同组合与显式 JSON。其余旧版本数据作为历史对照保留，不以旧 main 替代当前组合验收。
+
+## 最新最高档补强验证
+
+OS 提交 `c2f7309dbf4ddeef1688476d4b232176bd74bf87`，上层仍固定 `0efbb25175ea94bcfd28c8fbaabe16712d43bbf6`。2026-09-14 最终根 `mvn -B clean verify` 为 BUILD SUCCESS：编译器 11、OS 53、引擎 162，共 226 项；失败/错误/跳过均为 0。RealModuleIntegrationTest 的 6 项保留通过。
+
+最新数据库 JAR 再运行同一 SQL 脚本，11 条请求、两个真实 JVM 均符合预期。证据保存在 `verification/highest-standard-2026-09-14/`：maven-summary.json 包含每套测试的计数，manifest.json 包含所有被测 Java 文件及 JAR 的 SHA-256，sql/ 包含请求、实际响应与核验摘要。目录不提交临时数据库文件。
+
+以下 212 项和旧 OS 版本描述作为前次联调历史记录保留。最新结果以本节为准；没有修改 main 或合并 PR。
+
 ## 结论与版本
 
 2026 年 9 月 14 日，在独立 detached worktree 中验证通过。上层 SQL 编译器、数据库引擎、适配器和根 Maven 工程来自 main 提交 `0efbb25175ea94bcfd28c8fbaabe16712d43bbf6`；page-storage-system 替换为 os-storage-core 提交 `d0c4a4c3e5aec8a7271817db7a454ce30a012338` 的文件。
