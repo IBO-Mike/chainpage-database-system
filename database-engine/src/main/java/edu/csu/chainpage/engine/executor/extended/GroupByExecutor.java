@@ -144,7 +144,7 @@ public final class GroupByExecutor implements PlanExecutor {
                     );
                 }
             }
-            outputSchema.add(new ColumnSchema(aggregate.alias(), "INT"));
+            outputSchema.add(new ColumnSchema(aggregate.alias(), "BIGINT"));
         }
 
         Map<List<Object>, List<InternalRow>> groupedRows = new LinkedHashMap<>();

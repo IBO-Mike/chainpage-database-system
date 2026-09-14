@@ -163,7 +163,8 @@ public final class PlanParser {
                     || !(rawType instanceof String dataType) || dataType.isBlank()) {
                 return failure("EXECUTOR_INVALID_PLAN", "列必须包含name和dataType");
             }
-            if (!("INT".equalsIgnoreCase(dataType) || "VARCHAR".equalsIgnoreCase(dataType))) {
+            if (!("INT".equalsIgnoreCase(dataType) || "VARCHAR".equalsIgnoreCase(dataType)
+                    || "BIGINT".equalsIgnoreCase(dataType))) {
                 return failure("EXECUTOR_INVALID_PLAN", "schema中的列类型不受支持");
             }
             String normalizedName = name.toLowerCase(Locale.ROOT);

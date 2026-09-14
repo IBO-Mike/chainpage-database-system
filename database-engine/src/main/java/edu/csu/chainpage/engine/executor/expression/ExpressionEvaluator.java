@@ -41,6 +41,16 @@ public final class ExpressionEvaluator {
         if (!(rawName instanceof String name) || name.isBlank()) {
             return ExecutorSupport.failure(null, "EXECUTOR_PREDICATE_ERROR", "标识符缺少有效列名");
         }
+        Object binding = expression.get("binding");
+        if (binding instanceof Map<?, ?> bound
+                && bound.get("table") instanceof String table
+                && bound.get("column") instanceof String column
+                && row.contains(table + "." + column)) {
+            Object value = row.valueOf(table + "." + column);
+            return value == null
+                    ? ExecutorSupport.failure(null, "EXECUTOR_PREDICATE_ERROR", "引用了为空的列：" + name)
+                    : DbResult.ok(value);
+        }
         if (!row.contains(name) || row.valueOf(name) == null) {
             return ExecutorSupport.failure(null, "EXECUTOR_PREDICATE_ERROR", "引用了不存在或为空的列：" + name);
         }

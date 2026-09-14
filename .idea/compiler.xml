@@ -6,6 +6,8 @@
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
+        <module name="page-storage-system" />
+        <module name="sql-compiler" />
         <module name="database-engine" />
       </profile>
     </annotationProcessing>

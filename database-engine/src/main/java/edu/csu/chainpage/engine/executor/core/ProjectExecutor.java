@@ -67,7 +67,13 @@ public final class ProjectExecutor implements PlanExecutor {
         if (!rows.isOk()) {
             return ExecutorSupport.failureFrom(rows.error(), requestId);
         }
-        return DbResult.ok(ExecutionValue.command(CommandResult.select(columns.data(), rows.data())));
+        boolean compilerNames = columns.data().stream().anyMatch(name -> name.contains("."))
+                || plan.schema().stream().anyMatch(column -> input.schema().stream()
+                .noneMatch(inputColumn -> inputColumn.getName().equalsIgnoreCase(column.getName())));
+        List<String> outputNames = compilerNames && plan.schema().size() == columns.data().size()
+                ? plan.schema().stream().map(edu.csu.chainpage.engine.contract.ColumnSchema::getName).toList()
+                : columns.data();
+        return DbResult.ok(ExecutionValue.command(CommandResult.select(outputNames, rows.data())));
     }
 
     // 展开SELECT *或校验并保留显式列顺序

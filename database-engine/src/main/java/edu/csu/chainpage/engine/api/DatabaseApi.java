@@ -135,6 +135,12 @@ public final class DatabaseApi {
     public DbResult<DatabaseResponse> handleExecute(
             String requestId,
             DatabaseRequest request) {
+        if (request.getSql().stripLeading().matches("(?is)^EXPLAIN(?:\\s|;).*")) {
+            return DbResult.fail(edu.csu.chainpage.engine.common.DbError.invalidRequest(
+                    requestId,
+                    "EXPLAIN只能通过只读的handleExplain入口执行"
+            ));
+        }
         DbResult<CatalogSnapshot> snapshotResult = snapshotProvider.snapshot(requestId);
         if (!snapshotResult.isOk()) {
             return DbResult.fail(snapshotResult.error());

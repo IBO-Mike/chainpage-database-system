@@ -8,8 +8,15 @@ import edu.csu.chainpage.engine.executor.PlanExecutor;
 import edu.csu.chainpage.engine.plan.JsonPlanNode;
 import edu.csu.chainpage.engine.plan.PlanNode;
 import edu.csu.chainpage.engine.storage.RowSet;
+import edu.csu.chainpage.engine.storage.ColumnSchema;
+import edu.csu.chainpage.engine.storage.InternalRow;
+import edu.csu.chainpage.engine.storage.Row;
 import edu.csu.chainpage.engine.storage.StorageEngine;
 
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -64,7 +71,40 @@ public final class SeqScanExecutor implements PlanExecutor {
                     "存储引擎未返回行集"
             );
         }
-        return DbResult.ok(ExecutionValue.rows(scanned.data()));
+        DbResult<RowSet> bound = bindPlanSchema(requestId, plan, scanned.data());
+        return bound.isOk() ? DbResult.ok(ExecutionValue.rows(bound.data())) : DbResult.fail(bound.error());
+    }
+
+    // 把物理表列映射为编译器计划中的表名或别名限定列，供排序、分组和连接复用
+    private DbResult<RowSet> bindPlanSchema(String requestId, PlanNode plan, RowSet physical) {
+        if (plan.schema().isEmpty()) {
+            return DbResult.ok(physical);
+        }
+        if (plan.schema().size() != physical.schema().size()) {
+            return ExecutorSupport.failure(requestId, "EXECUTOR_INVALID_PLAN", "扫描计划列数与物理表不一致");
+        }
+        List<ColumnSchema> boundSchema = new ArrayList<>();
+        for (int index = 0; index < plan.schema().size(); index++) {
+            var planned = plan.schema().get(index);
+            ColumnSchema stored = physical.schema().get(index);
+            String name = planned.getName();
+            String physicalName = name.substring(name.lastIndexOf('.') + 1);
+            if (!stored.getName().equalsIgnoreCase(physicalName)
+                    || !stored.getDataType().equalsIgnoreCase(planned.getDataType())) {
+                return ExecutorSupport.failure(requestId, "EXECUTOR_INVALID_PLAN", "扫描计划列与物理表不一致：" + name);
+            }
+            boundSchema.add(new ColumnSchema(name, planned.getDataType()));
+        }
+        List<InternalRow> boundRows = new ArrayList<>();
+        for (InternalRow source : physical.rows()) {
+            Map<String, Object> values = new LinkedHashMap<>();
+            for (int index = 0; index < boundSchema.size(); index++) {
+                values.put(boundSchema.get(index).getName(),
+                        source.values().valueOf(physical.schema().get(index).getName()));
+            }
+            boundRows.add(new InternalRow(source.rowId(), new Row(values)));
+        }
+        return DbResult.ok(new RowSet(boundSchema, boundRows));
     }
 
     // 从目录查询扫描目标表结构

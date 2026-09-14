@@ -1,4 +1,5 @@
-docs/
+docs/*
+!docs/三模块整合步骤与代码修改记录.md
 database-engine/docs-mike/
 .DS_Store
 **/target/

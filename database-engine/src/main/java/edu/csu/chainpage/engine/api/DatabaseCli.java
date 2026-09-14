@@ -92,6 +92,11 @@ public final class DatabaseCli {
     private DbResult<?> handleLine(String line) {
         String requestId = nextRequestId();
         try {
+            if (!line.stripLeading().startsWith("{")) {
+                return isExplainSql(line)
+                        ? databaseApi.handleExplain(requestId, line)
+                        : databaseApi.handle(requestId, new DatabaseRequest(line, "execute"));
+            }
             Map<String, Object> fields = jsonCodec.readObject(line);
             Object sql = fields.get("sql");
             if (sql instanceof String text && isExplainSql(text)) {

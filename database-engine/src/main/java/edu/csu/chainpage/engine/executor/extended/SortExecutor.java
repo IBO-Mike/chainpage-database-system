@@ -174,7 +174,7 @@ public final class SortExecutor implements PlanExecutor {
         if (value == null) {
             return false;
         }
-        return "INT".equals(dataType)
+        return ("INT".equals(dataType) || "BIGINT".equals(dataType))
                 ? value instanceof Number
                 : "VARCHAR".equals(dataType) && value instanceof String;
     }
