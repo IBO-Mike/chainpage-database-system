@@ -3,6 +3,7 @@ package edu.csu.chainpage.engine.catalog;
 import edu.csu.chainpage.engine.common.DbError;
 import edu.csu.chainpage.engine.contract.ColumnSchema;
 import edu.csu.chainpage.engine.contract.TableSchema;
+import edu.csu.chainpage.engine.contract.PageStorageClient;
 import edu.csu.chainpage.engine.storage.Row;
 import edu.csu.chainpage.engine.storage.StorageEngine;
 import edu.csu.chainpage.engine.support.FakePageStorageClient;
@@ -89,6 +90,64 @@ class StorageCatalogRepositoryTest {
         assertEquals("FILE_IO_ERROR", saved.error().getCode());
         assertTrue(loaded.isOk());
         assertTrue(loaded.data().isEmpty());
+    }
+
+    @Test
+    void acceptsDocumentedStorageTableExistsCodeDuringRestart() {
+        FakePageStorageClient delegate = new FakePageStorageClient();
+        delegate.createTablePages("prepare", StorageCatalogRepository.CATALOG_TABLE);
+        PageStorageClient documentedCodes = new PageStorageClient() {
+            @Override
+            public edu.csu.chainpage.engine.common.DbResult<edu.csu.chainpage.engine.contract.PageData> getPage(
+                    String requestId, int pageId) {
+                return delegate.getPage(requestId, pageId);
+            }
+
+            @Override
+            public edu.csu.chainpage.engine.common.DbResult<edu.csu.chainpage.engine.contract.WritePageResult> writePage(
+                    String requestId, int pageId, String base64Data) {
+                return delegate.writePage(requestId, pageId, base64Data);
+            }
+
+            @Override
+            public edu.csu.chainpage.engine.common.DbResult<edu.csu.chainpage.engine.contract.TablePages> createTablePages(
+                    String requestId, String table) {
+                return edu.csu.chainpage.engine.common.DbResult.fail(new DbError(
+                        requestId, null, "STORAGE", "STORAGE_TABLE_EXISTS",
+                        "表已存在", null, null, null
+                ));
+            }
+
+            @Override
+            public edu.csu.chainpage.engine.common.DbResult<edu.csu.chainpage.engine.contract.DropTablePagesResult> dropTablePages(
+                    String requestId, String table) {
+                return delegate.dropTablePages(requestId, table);
+            }
+
+            @Override
+            public edu.csu.chainpage.engine.common.DbResult<edu.csu.chainpage.engine.contract.AllocatedPage> allocatePageForTable(
+                    String requestId, String table) {
+                return delegate.allocatePageForTable(requestId, table);
+            }
+
+            @Override
+            public edu.csu.chainpage.engine.common.DbResult<edu.csu.chainpage.engine.contract.TablePages> listTablePages(
+                    String requestId, String table) {
+                return delegate.listTablePages(requestId, table);
+            }
+
+            @Override
+            public edu.csu.chainpage.engine.common.DbResult<edu.csu.chainpage.engine.contract.FlushResult> flushAll(
+                    String requestId) {
+                return delegate.flushAll(requestId);
+            }
+        };
+        StorageCatalogRepository repository = new StorageCatalogRepository(
+                new StorageEngine(documentedCodes)
+        );
+
+        assertTrue(repository.initialize("req-restart").isOk());
+        assertTrue(repository.load("req-load").isOk());
     }
 
     private StorageCatalogRepository repository(FakePageStorageClient client) {

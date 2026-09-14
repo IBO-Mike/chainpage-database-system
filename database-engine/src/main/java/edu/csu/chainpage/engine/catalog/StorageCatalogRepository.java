@@ -43,7 +43,9 @@ public final class StorageCatalogRepository implements CatalogRepository {
         edu.csu.chainpage.engine.storage.TableSchema storageSchema = catalogStorageSchema();
         DbResult<edu.csu.chainpage.engine.contract.TablePages> created =
                 storageEngine.createTableStorage(requestId, storageSchema);
-        if (!created.isOk() && !"TABLE_ALREADY_EXISTS".equals(created.error().getCode())) {
+        if (!created.isOk()
+                && !"TABLE_ALREADY_EXISTS".equals(created.error().getCode())
+                && !"STORAGE_TABLE_EXISTS".equals(created.error().getCode())) {
             return DbResult.fail(created.error());
         }
 
