@@ -1,6 +1,7 @@
 param(
     [Parameter(Mandatory = $true)][string]$DatabaseJar,
-    [Parameter(Mandatory = $true)][string]$EvidenceDirectory
+    [Parameter(Mandatory = $true)][string]$EvidenceDirectory,
+    [string[]]$CliArguments = @()
 )
 
 # Run the actual three-module JAR twice against a fresh isolated database.
@@ -30,7 +31,7 @@ function Run-Cli([string]$Name, [string[]]$Requests) {
     $errorPath = Join-Path $evidence "$Name-stderr.txt"
     $Requests | Set-Content -LiteralPath $inputPath -Encoding utf8
     $raw = @(Get-Content -LiteralPath $inputPath -Encoding utf8 |
-        & java -jar $jar --data $database 2> $errorPath)
+        & java -jar $jar --data $database @CliArguments 2> $errorPath)
     $exitCode = $LASTEXITCODE
     $raw | Set-Content -LiteralPath $outputPath -Encoding utf8
     Assert-Value $exitCode 0 "$Name process exit"

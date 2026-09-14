@@ -29,7 +29,7 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          git worktree add --detach ../chainpage-ci-integration 0efbb25175ea94bcfd28c8fbaabe16712d43bbf6
+          git worktree add --detach ../chainpage-ci-integration ddb0dd7ca677da64f7b65f101a22402826fa81f7
           if ($LASTEXITCODE -ne 0) { throw 'Cannot create isolated integration checkout' }
           git -C ../chainpage-ci-integration restore --source="$env:GITHUB_SHA" --worktree -- page-storage-system
           if ($LASTEXITCODE -ne 0) { throw 'Cannot select the current OS implementation' }
@@ -38,7 +38,7 @@ jobs:
             mvn --batch-mode clean verify
             if ($LASTEXITCODE -ne 0) { throw 'Three-module Maven verification failed' }
           } finally { Pop-Location }
-          ./page-storage-system/verification/verify-sql-integration.ps1 -DatabaseJar ../chainpage-ci-integration/database-engine/target/chainpage-db.jar -EvidenceDirectory ../chainpage-ci-evidence
+          ./page-storage-system/verification/verify-sql-integration.ps1 -DatabaseJar ../chainpage-ci-integration/database-engine/target/chainpage-db.jar -EvidenceDirectory ../chainpage-ci-evidence -CliArguments @('--json')
       - name: Collect evidence inside the checkout
         if: always()
         shell: pwsh
