@@ -96,6 +96,7 @@ $summary = [ordered]@{
     processes = 2
     checks = $checks.ToArray()
     jarSha256 = (Get-FileHash -LiteralPath $jar -Algorithm SHA256).Hash
+    cliArguments = @($CliArguments)
     missingTableError = $first[7].error
 }
 $summary | ConvertTo-Json -Depth 30 | Set-Content -LiteralPath (Join-Path $evidence 'summary.json') -Encoding utf8

@@ -33,6 +33,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Cannot create isolated integration checkout' }
           git -C ../chainpage-ci-integration restore --source="$env:GITHUB_SHA" --worktree -- page-storage-system
           if ($LASTEXITCODE -ne 0) { throw 'Cannot select the current OS implementation' }
+          ./page-storage-system/verification/apply-main-windows-test-fix.ps1 -IntegrationCheckout ../chainpage-ci-integration
           Push-Location ../chainpage-ci-integration
           try {
             mvn --batch-mode clean verify
