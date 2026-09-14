@@ -3,6 +3,7 @@ package edu.csu.chainpage.engine.integration;
 import edu.csu.chainpage.engine.api.DatabaseApi;
 import edu.csu.chainpage.engine.api.DatabaseCli;
 import edu.csu.chainpage.engine.api.DatabaseRequest;
+import edu.csu.chainpage.engine.api.CliOutputFormat;
 import edu.csu.chainpage.engine.api.StatementExecutionResult;
 import edu.csu.chainpage.engine.common.DbResult;
 import edu.csu.chainpage.engine.common.JsonCodec;
@@ -69,7 +70,7 @@ class ContractCompatibilityTest {
                 )
         );
         JsonCodec json = new JsonCodec();
-        DatabaseCli cli = new DatabaseCli(api, json);
+        DatabaseCli cli = new DatabaseCli(api, json, CliOutputFormat.JSON);
         DbResult<?> response = api.handle(
                 "req-envelope",
                 new DatabaseRequest("SELECT 1;", "compile")

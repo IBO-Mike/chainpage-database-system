@@ -16,6 +16,8 @@
 
 本模块接收 SQL 编译器产生的逻辑计划，其节点格式必须与 `sql-compiler-spec.md` 的 `CreateTable`、`Insert`、`SeqScan`、`Filter`、`Project`、`Delete` 一致；访问页式存储系统时必须使用 `paged-storage-spec.md` 的统一存储访问接口。
 
+说明：这里的 JSON 约定用于模块/API之间传递结构化数据。面向人直接使用的 `ChainPageMain` 命令行默认把同一结果转换为 MySQL 风格文本；交互式文本模式使用 JLine 提供光标编辑和历史记录，启动时显示欢迎信息，并在每次读取命令前显示 `cpdbs>`；需要脚本解析时可使用 `--format json` 或 `--json` 保留上述 JSON 包络且不输出提示符。使用 `--file SQL文件` 可按 UTF-8 批量执行文件中的多行 SQL，文件模式不显示交互式提示符。可执行 JAR 同时打包 JNA，以覆盖 Windows 的终端控制实现。
+
 ### 实现说明
 
 各子模块之间只能传递本规约定义的 JSON 数据。可在同一进程中以函数调用实现，也可通过 API 实现；两种实现的请求和响应语义必须相同。
@@ -68,11 +70,13 @@ CLI/API 是唯一接收用户 SQL 的入口；编译器输出计划，Plan Dispa
 
 ### 功能介绍
 
-这是用户和数据库说话的门口。用户提交一段 SQL，它负责调用编译器和执行器，并把查询结果或错误清楚地返回。
+这是用户和数据库说话的门口。用户提交一段 SQL，它负责调用编译器和执行器，并把查询结果或错误清楚地返回。交互式命令行默认显示人类可读文本，程序化 API 仍遵循本节的 JSON 结构。
 
 ### 输入与输出格式
 
 输入：`{ "sql":"一条或多条以分号结束的SQL","mode":"execute | compile" }`。`sql` 必须是字符串，`mode` 只能取两个给定值。
+
+命令行入口还支持 `--file SQL文件`：按 UTF-8 读取并依次提交文件中的 SQL 语句，不显示交互式提示符；任一语句失败时进程返回非零状态。`--data 数据目录` 选择持久化目录，`--format json` 或 `--json` 保留机器可读输出。
 
 `mode:"compile"` 成功时返回 `{ "ok":true,"data":{ "results":[{ "statementIndex":非负整数,"tokens":[Token],"ast":Statement,"semantic":AnnotatedStatement,"plan":Plan,"optimizedPlan":Plan或null }] } }`；`mode:"execute"` 成功时返回 `{ "ok":true,"data":{ "results":[ExecutionResult] } }`。每条 `ExecutionResult` 格式为：
 
