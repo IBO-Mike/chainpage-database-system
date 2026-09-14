@@ -20,6 +20,19 @@ java -jar target/storage-cli.jar --root ./storage-data --capacity 16 --policy LR
 
 It reads one UTF-8 JSON request per line and writes one response per line.
 
+## Course assessment materials
+
+- [OS design and defense guide](OS-DESIGN.md): module responsibilities, data structures,
+  read/write/recovery flows, integration contract and implementation limits.
+- [Preset acceptance cases](OS-ACCEPTANCE.md): inputs, expected results, test mapping and
+  a reproducible DIRECT/FIFO/LRU comparison.
+- [Rubric completion report](OS-RUBRIC-REPORT.md): item-by-item evidence, current results
+  and work that still requires upper-layer integration or a personal demonstration.
+
+Run `mvn -B -Dtest=RubricAcceptanceTest test` for the seven focused cases, or
+`mvn -B clean verify` for the full suite and CLI jar. The comparison writes
+`target/rubric-cache-comparison.json`; elapsed times are observations, not pass criteria.
+
 ```text
 read_at / write_at / sync / allocate_page / free_page / read_page
 get_page / put_page / write_page / flush_page / flush_all / stats / storage_stats

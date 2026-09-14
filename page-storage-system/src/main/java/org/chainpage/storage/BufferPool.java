@@ -72,6 +72,7 @@ public final class BufferPool {
     public synchronized Put putPage(int id, byte[] data, boolean dirty, String owner, int tx) {
         FileManager.page(data, id);
         pages.requireAllocated(id);
+        if (tx < 0) throw new StorageException("WAL_INVALID_TX", "txId 必须非负", id);
         try (LockManager.Lease ignored = locks.acquire(id, "WRITE", owner(owner))) {
             Frame f = frames.get(id);
             if (f != null && f.generation != pages.generation(id)) {
@@ -80,11 +81,20 @@ public final class BufferPool {
                 f = null;
             }
             byte[] before = f == null ? pages.readPage(id) : f.data.clone();
+            boolean willBeDirty = dirty || (f != null && f.dirty);
             Integer victim = null, flushed = null;
             if (f == null) {
                 int[] e = evict();
                 victim = e[0] < 0 ? null : e[0];
                 flushed = e[1] < 0 ? null : e[1];
+            }
+            // Persist UPDATE before publishing new bytes in memory; a WAL failure must not
+            // leave an unlogged dirty image available for a later flush.
+            Long sequence =
+                    willBeDirty && !Arrays.equals(before, data)
+                            ? wal.append(tx, id, before, data)
+                            : null;
+            if (f == null) {
                 f = new Frame(data.clone(), pages.generation(id), dirty);
                 frames.put(id, f);
                 policy.insert(id);
@@ -93,9 +103,7 @@ public final class BufferPool {
                 f.dirty |= dirty;
                 policy.access(id);
             }
-            // Persist the page image in WAL before a later flush can write the dirty frame.
-            if (f.dirty && !Arrays.equals(before, data))
-                f.lsns.add(wal.append(tx, id, before, data));
+            if (sequence != null) f.lsns.add(sequence);
             return new Put(victim, flushed);
         }
     }
