@@ -27,7 +27,9 @@ It reads one UTF-8 JSON request per line and writes one response per line.
 - [Preset acceptance cases](OS-ACCEPTANCE.md): inputs, expected results, test mapping and
   a reproducible DIRECT/FIFO/LRU comparison.
 - [Rubric completion report](OS-RUBRIC-REPORT.md): item-by-item evidence, current results
-  and work that still requires upper-layer integration or a personal demonstration.
+  and work that still requires a personal demonstration.
+- [Real-module SQL integration](OS-INTEGRATION.md): pinned main and OS revisions,
+  full reactor tests, actual database CLI requests and cross-JVM restart evidence.
 
 Run `mvn -B -Dtest=RubricAcceptanceTest test` for the seven focused cases, or
 `mvn -B clean verify` for the full suite and CLI jar. The comparison writes

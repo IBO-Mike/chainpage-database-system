@@ -1,0 +1,29 @@
+{
+  "mainCommit": "0efbb25175ea94bcfd28c8fbaabe16712d43bbf6",
+  "osCommit": "d0c4a4c3e5aec8a7271817db7a454ce30a012338",
+  "command": "mvn -B clean verify",
+  "status": "BUILD SUCCESS",
+  "modules": [
+    {
+      "module": "sql-compiler",
+      "tests": 11,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "module": "page-storage-system",
+      "tests": 39,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "module": "database-engine",
+      "tests": 162,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  ]
+}

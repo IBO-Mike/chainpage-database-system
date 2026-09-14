@@ -51,6 +51,6 @@ FIFO 第一轮 miss=5，后续每轮 miss=3，因此为 5+99×3=302；LRU 第一
 
 elapsedNanos 记录实际耗时，但包含测试断言、数据比较、JVM 执行和操作系统文件缓存影响，不设置耗时通过阈值。页文件读取次数不是硬件物理磁盘读取次数，也不是项目代码优化前后版本比较；这里比较的是直接 I/O、FIFO 和 LRU 三种现有模式。
 
-## 待与组员执行
+## 已完成真实三模块联调
 
-在合并各成员实现的独立集成环境中预设 CREATE、INSERT、SELECT、DELETE 测试，核对“SQL 输入、编译计划、执行算子、OS 存储调用、结果返回、重启后查询”完整链路。当前分支缺少上层实现，不能在 OS 测试中用模拟 SQL 结果宣称系统联调通过。
+使用最新 main 的编译器、引擎和适配器，在独立 detached worktree 中配合 OS 分支版本，完成根 Maven clean verify 的 212 项测试。verification/verify-sql-integration.ps1 对真实数据库 jar 执行 CREATE、INSERT、SELECT、DELETE、compile 和错误请求，并以第二 JVM 验证重启后表结构、删除结果和后续读写。版本、预期值、实际响应与复现步骤见 OS-INTEGRATION.md。
