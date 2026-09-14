@@ -104,6 +104,9 @@ final class AtomicCoordinator {
     private void reload() {
         pages.load();
         tables.load();
+        // Restored disk pages must replace any frames from the failed operation before the
+        // index loader reads and validates its tree through BufferPool.
+        buffer.clear();
         tree.load();
         wal.bootstrap();
         buffer.clear();
@@ -129,17 +132,21 @@ final class AtomicCoordinator {
             long offset = offsetNode.longValue();
             JsonNode fileNode = s.get("files");
             if (fileNode == null || !fileNode.isObject()) throw new Exception("files");
+            Map<String, byte[]> restored = new LinkedHashMap<>();
             for (String n : FILES) {
                 JsonNode value = fileNode.get(n);
                 if (value == null || !value.isTextual()) throw new Exception("file " + n);
-                JsonFiles.replace(
-                        root.resolve(n),
-                        JsonFiles.unb64(value.textValue(), "RECOVERY_JOURNAL_CORRUPT"));
-                CrashHooks.hit("during_restore");
+                restored.put(n, JsonFiles.unb64(value.textValue(), "RECOVERY_JOURNAL_CORRUPT"));
             }
             if (!Files.exists(root.resolve("wal.log"))
                     || Files.size(root.resolve("wal.log")) < offset)
                 throw new Exception("walOffset exceeds WAL length");
+            // Validate the whole journal before replacing any file. Corrupt later entries
+            // must not leave an otherwise valid database partially overwritten.
+            for (var entry : restored.entrySet()) {
+                JsonFiles.replace(root.resolve(entry.getKey()), entry.getValue());
+                CrashHooks.hit("during_restore");
+            }
             try (FileChannel ch =
                     FileChannel.open(root.resolve("wal.log"), StandardOpenOption.WRITE)) {
                 // Discard WAL entries from the operation whose file snapshots were just restored.

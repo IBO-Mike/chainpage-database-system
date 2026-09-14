@@ -108,6 +108,24 @@ public final class BufferPool {
         }
     }
 
+    /** Direct I/O stays coherent with dirty frames and REDO; it does not load or evict pages. */
+    synchronized void writeDirect(int id, byte[] data) {
+        FileManager.page(data, id);
+        pages.requireAllocated(id);
+        try (LockManager.Lease ignored = locks.acquire(id, "WRITE", owner(null))) {
+            Frame resident = frames.get(id);
+            byte[] before = resident == null ? pages.readPage(id) : resident.data.clone();
+            long sequence = wal.append(0, id, before, data);
+            // Retire the stale frame as soon as UPDATE is durable: even an I/O failure leaves
+            // recovery as the authority, rather than allowing old dirty bytes to overwrite it.
+            frames.remove(id);
+            policy.remove(id);
+            pages.writePage(id, data);
+            pages.sync();
+            wal.applied(sequence);
+        }
+    }
+
     private int[] evict() {
         if (frames.size() < capacity) return new int[] {-1, -1};
         int id = policy.victim(frames.keySet());

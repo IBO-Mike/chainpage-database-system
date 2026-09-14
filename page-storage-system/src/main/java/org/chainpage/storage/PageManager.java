@@ -103,8 +103,10 @@ public final class PageManager {
     public synchronized int allocatePage() {
         // Reuse the lowest free ID, zero its contents, then publish a new generation.
         boolean reuse = !free.isEmpty();
-        int id = reuse ? free.first() : (int) file.pageCount();
+        int id = reuse ? free.first() : Math.toIntExact(file.pageCount());
         long old = generation(id);
+        if (old == Long.MAX_VALUE)
+            throw new StorageException("PAGE_GENERATION_EXHAUSTED", "页分配代数已耗尽", id);
         if (reuse) file.writeAt(id, new byte[FileManager.PAGE_SIZE]);
         else {
             int made = file.appendZero();

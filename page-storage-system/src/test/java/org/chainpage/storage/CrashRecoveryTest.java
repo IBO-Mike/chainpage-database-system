@@ -34,6 +34,14 @@ class CrashRecoveryTest {
     void processDeathRollsBackWholeOperation(String action, String point, int count)
             throws Exception {
         prepare();
+        if (action.equals("delete")) {
+            // Incremental deletion frees pages only on an actual merge. Prepare two
+            // half-full leaves, so deleting key 0 exercises merge and root collapse.
+            try (StorageManager s = new StorageManager(dir, 4, "LRU", true)) {
+                s.indexInsert(1, 16, rid(16));
+                s.indexDelete(1, 16, null);
+            }
+        }
         Map<String, byte[]> before = snapshot();
         Process p = spawn(action, point, count);
         assertEquals(61, p.waitFor());

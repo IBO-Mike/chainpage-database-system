@@ -11,6 +11,7 @@ public final class CrashHarness {
             case "delete" -> s.indexDelete(1, 0, null);
             case "drop-table" -> s.dropTablePages("t");
             case "allocate-table" -> s.allocatePageForTable("t");
+            case "checkpoint" -> s.checkpoint();
             case "open" -> {}
             default -> throw new IllegalArgumentException(args[1]);
         }

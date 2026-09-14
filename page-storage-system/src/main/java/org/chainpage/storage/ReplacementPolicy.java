@@ -17,7 +17,8 @@ interface ReplacementPolicy {
     static ReplacementPolicy make(String name) {
         if ("LRU".equalsIgnoreCase(name)) return new Lru();
         if ("FIFO".equalsIgnoreCase(name)) return new Fifo();
-        throw new StorageException("BUFFER_POLICY_INVALID", "policy 只支持 LRU 或 FIFO");
+        if ("CLOCK".equalsIgnoreCase(name)) return new Clock();
+        throw new StorageException("BUFFER_POLICY_INVALID", "policy 只支持 LRU、FIFO 或 CLOCK");
     }
 
     abstract class Base implements ReplacementPolicy {
@@ -79,6 +80,76 @@ interface ReplacementPolicy {
 
         public String name() {
             return "FIFO";
+        }
+    }
+
+    /** Second-chance replacement: a circular hand clears reference bits before eviction. */
+    final class Clock extends Base {
+        private static final class Entry {
+            final int id;
+            boolean referenced = true;
+            Entry previous, next;
+
+            Entry(int id) {
+                this.id = id;
+            }
+        }
+
+        private final Map<Integer, Entry> entries = new HashMap<>();
+        private Entry hand;
+
+        public void insert(int id) {
+            Entry existing = entries.get(id);
+            if (existing != null) {
+                existing.referenced = true;
+                return;
+            }
+            Entry entry = new Entry(id);
+            if (hand == null) {
+                entry.next = entry.previous = entry;
+                hand = entry;
+            } else {
+                entry.previous = hand.previous;
+                entry.next = hand;
+                hand.previous.next = entry;
+                hand.previous = entry;
+            }
+            entries.put(id, entry);
+        }
+
+        public void access(int id) {
+            Entry entry = entries.get(id);
+            if (entry == null)
+                throw new StorageException("BUFFER_POLICY_INVALID_STATE", "CLOCK 未登记页", id);
+            entry.referenced = true;
+        }
+
+        public void remove(int id) {
+            Entry entry = entries.remove(id);
+            if (entry == null) return;
+            if (entries.isEmpty()) {
+                hand = null;
+                return;
+            }
+            entry.previous.next = entry.next;
+            entry.next.previous = entry.previous;
+            if (hand == entry) hand = entry.next;
+        }
+
+        public int victim(Set<Integer> residents) {
+            validate(residents, entries.keySet());
+            // At most two rotations: known pages outside the candidate set are skipped.
+            while (true) {
+                Entry candidate = hand;
+                hand = hand.next;
+                if (!residents.contains(candidate.id)) continue;
+                if (candidate.referenced) candidate.referenced = false;
+                else return candidate.id;
+            }
+        }
+
+        public String name() {
+            return "CLOCK";
         }
     }
 }

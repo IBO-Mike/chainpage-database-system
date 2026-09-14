@@ -98,7 +98,7 @@ public final class StorageManager implements AutoCloseable {
     public void writePageDirect(int id, byte[] data) {
         locked(
                 () -> {
-                    pages.writePage(id, data);
+                    buffer.writeDirect(id, data);
                     return null;
                 });
     }
@@ -157,6 +157,7 @@ public final class StorageManager implements AutoCloseable {
         return atom(
                 () -> {
                     pages.requireAllocated(id);
+                    if (indexes.owns(id)) throw new StorageException("PAGE_IN_USE", "页仍被索引引用", id);
                     return tables.append(t, id);
                 });
     }
@@ -281,7 +282,24 @@ public final class StorageManager implements AutoCloseable {
     }
 
     public Map<String, Object> recover() {
-        return locked(wal::recover);
+        return locked(
+                () -> {
+                    buffer.flushAll();
+                    Map<String, Object> result = wal.recover();
+                    buffer.clear();
+                    return result;
+                });
+    }
+
+    /** Force all dirty pages and pending REDO before atomically compacting the WAL. */
+    public Map<String, Object> checkpoint() {
+        return locked(
+                () -> {
+                    buffer.flushAll();
+                    wal.recover();
+                    buffer.clear();
+                    return wal.checkpoint();
+                });
     }
 
     public Map<String, Object> lockPage(int id, String mode, String owner) {
@@ -301,6 +319,8 @@ public final class StorageManager implements AutoCloseable {
                 () -> {
                     Map<String, Object> m = new LinkedHashMap<>(buffer.stats());
                     m.put("allocatedPages", pages.allocatedCount());
+                    m.put("walBytes", wal.offset());
+                    m.put("nextLogSeq", wal.next());
                     return m;
                 });
     }

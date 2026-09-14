@@ -7,7 +7,7 @@ import java.nio.ByteOrder;
 import java.nio.file.*;
 import java.util.*;
 
-/** Page-backed B+ tree using deterministic full-tree rebalancing on mutation. */
+/** Page-backed B+ tree with local splits, borrowing/merging and byte-aware variable keys. */
 final class BPlusTree {
     private static final int MAGIC = 0x43504231, HEADER = 8, MAX_KEYS = 16, MAX_KEY_BYTES = 1024;
 
@@ -51,7 +51,11 @@ final class BPlusTree {
                                 try {
                                     int id = Integer.parseInt(e.getKey());
                                     JsonNode m = e.getValue();
-                                    int root = m.path("rootPageId").intValue();
+                                    JsonNode rootNode = m.get("rootPageId");
+                                    if (rootNode == null
+                                            || !rootNode.isIntegralNumber()
+                                            || !rootNode.canConvertToInt()) throw new Exception();
+                                    int root = rootNode.intValue();
                                     if (id < 0
                                             || !pages.isAllocated(root)
                                             || !m.path("unique").isBoolean()) throw new Exception();
@@ -128,23 +132,138 @@ final class BPlusTree {
     synchronized Map<String, Object> insert(int id, Object key, Map<String, Object> rowId) {
         Meta m = meta(id);
         String type = validateKey(key, m.keyType, true);
-        Map<String, List<Map<String, Object>>> all = entries(m);
-        String token = token(key);
-        List<Map<String, Object>> values = all.get(token);
         Map<String, Object> rid = rowId(rowId);
-        if (values != null) {
-            if (m.unique) throw new StorageException("INDEX_DUPLICATE_KEY", "重复索引键");
-            if (values.contains(rid))
-                throw new StorageException("INDEX_DUPLICATE_ROWID", "重复 RowId");
-            values.add(rid);
-        } else all.put(token, new ArrayList<>(List.of(rid)));
-        rebuild(id, new Meta(m.rootPageId, m.unique, type), all);
+        Split split = insertNode(m.rootPageId, key, rid, m.unique, type);
+        int root = m.rootPageId;
+        if (split != null) {
+            root = pages.allocatePage();
+            write(root, internal(List.of(split.separator), List.of(m.rootPageId, split.right)));
+        }
+        if (root != m.rootPageId || !Objects.equals(type, m.keyType)) {
+            indexes.put(id, new Meta(root, m.unique, type));
+            persist();
+        }
         return Map.of("inserted", true);
+    }
+
+    private record Split(Object separator, int right) {}
+
+    private Split insertNode(
+            int page, Object key, Map<String, Object> rid, boolean unique, String type) {
+        Node node = read(page);
+        List<Object> keys = new ArrayList<>(node.keys);
+        if (node.leaf) {
+            List<List<Map<String, Object>>> values = new ArrayList<>();
+            node.values.forEach(v -> values.add(new ArrayList<>(v)));
+            int at = Collections.binarySearch(keys, key, BPlusTree::compare);
+            if (at >= 0) {
+                if (unique) throw new StorageException("INDEX_DUPLICATE_KEY", "重复索引键");
+                if (values.get(at).contains(rid))
+                    throw new StorageException("INDEX_DUPLICATE_ROWID", "重复 RowId");
+                values.get(at).add(rid);
+            } else {
+                at = -at - 1;
+                keys.add(at, key);
+                values.add(at, new ArrayList<>(List.of(rid)));
+            }
+            Map<String, Object> updated = leaf(keys, values, node.prev, node.next);
+            if (keys.size() <= MAX_KEYS && fits(updated)) {
+                write(page, updated);
+                return null;
+            }
+            int cut = leafCut(keys, values, type);
+            int right = pages.allocatePage();
+            write(page, leaf(keys.subList(0, cut), values.subList(0, cut), node.prev, right));
+            write(
+                    right,
+                    leaf(
+                            keys.subList(cut, keys.size()),
+                            values.subList(cut, values.size()),
+                            page,
+                            node.next));
+            if (node.next != null) {
+                Node neighbor = read(node.next);
+                write(neighbor.page, leaf(neighbor.keys, neighbor.values, right, neighbor.next));
+            }
+            return new Split(keys.get(cut), right);
+        }
+        List<Integer> children = new ArrayList<>(node.children);
+        int child = 0;
+        while (child < keys.size() && compare(key, keys.get(child)) >= 0) child++;
+        Split split = insertNode(children.get(child), key, rid, unique, type);
+        if (split == null) return null;
+        keys.add(child, split.separator);
+        children.add(child + 1, split.right);
+        Map<String, Object> updated = internal(keys, children);
+        if (keys.size() <= MAX_KEYS && fits(updated)) {
+            write(page, updated);
+            return null;
+        }
+        int cut = internalCut(keys, children, type);
+        int right = pages.allocatePage();
+        write(page, internal(keys.subList(0, cut), children.subList(0, cut + 1)));
+        write(
+                right,
+                internal(
+                        keys.subList(cut + 1, keys.size()),
+                        children.subList(cut + 1, children.size())));
+        // The middle separator is promoted, rather than duplicated in an internal child.
+        return new Split(keys.get(cut), right);
+    }
+
+    private static int leafCut(
+            List<Object> keys, List<List<Map<String, Object>>> values, String type) {
+        int minimum = "INT".equals(type) ? 8 : 1;
+        int best = -1;
+        for (int cut = minimum; cut <= keys.size() - minimum; cut++) {
+            if (fits(
+                            leaf(
+                                    keys.subList(0, cut),
+                                    values.subList(0, cut),
+                                    Integer.MAX_VALUE,
+                                    Integer.MAX_VALUE))
+                    && fits(
+                            leaf(
+                                    keys.subList(cut, keys.size()),
+                                    values.subList(cut, values.size()),
+                                    Integer.MAX_VALUE,
+                                    Integer.MAX_VALUE))
+                    && (best < 0
+                            || Math.abs(cut * 2 - keys.size()) < Math.abs(best * 2 - keys.size())))
+                best = cut;
+        }
+        if (best < 0) throw new StorageException("INDEX_PAGE_OVERFLOW", "索引项无法按节点占用要求分页");
+        return best;
+    }
+
+    private static int internalCut(List<Object> keys, List<Integer> children, String type) {
+        int minimum = "INT".equals(type) ? 8 : 1;
+        for (int distance = 0; distance < keys.size(); distance++) {
+            for (int cut : new int[] {keys.size() / 2 - distance, keys.size() / 2 + distance}) {
+                if (cut < minimum || keys.size() - cut - 1 < minimum) continue;
+                if (fits(internal(keys.subList(0, cut), children.subList(0, cut + 1)))
+                        && fits(
+                                internal(
+                                        keys.subList(cut + 1, keys.size()),
+                                        children.subList(cut + 1, children.size())))) return cut;
+            }
+        }
+        throw new StorageException("INDEX_PAGE_OVERFLOW", "内部节点无法分页");
     }
 
     synchronized Map<String, Object> delete(int id, Object key, Map<String, Object> rowId) {
         Meta m = meta(id);
         validateKey(key, m.keyType, false);
+        if ("INT".equals(m.keyType) && m.unique) {
+            deleteNode(m.rootPageId, key, rowId == null ? null : rowId(rowId));
+            Node root = read(m.rootPageId);
+            if (!root.leaf && root.children.size() == 1) {
+                indexes.put(id, new Meta(root.children.get(0), m.unique, m.keyType));
+                persist();
+                release(root.page);
+            }
+            return Map.of("deleted", true);
+        }
         Map<String, List<Map<String, Object>>> all = entries(m);
         List<Map<String, Object>> values = all.get(token(key));
         if (values == null) throw new StorageException("INDEX_KEY_NOT_FOUND", "索引键不存在");
@@ -157,6 +276,114 @@ final class BPlusTree {
         }
         rebuild(id, m, all);
         return Map.of("deleted", true);
+    }
+
+    private boolean deleteNode(int page, Object key, Map<String, Object> rid) {
+        Node node = read(page);
+        List<Object> keys = new ArrayList<>(node.keys);
+        if (node.leaf) {
+            int at = Collections.binarySearch(keys, key, BPlusTree::compare);
+            if (at < 0) throw new StorageException("INDEX_KEY_NOT_FOUND", "索引键不存在");
+            List<List<Map<String, Object>>> values = new ArrayList<>(node.values);
+            if (rid != null && !values.get(at).contains(rid))
+                throw new StorageException("INDEX_ROWID_NOT_FOUND", "RowId 不存在");
+            keys.remove(at);
+            values.remove(at);
+            write(page, leaf(keys, values, node.prev, node.next));
+            return keys.size() < 8;
+        }
+        List<Integer> children = new ArrayList<>(node.children);
+        int child = 0;
+        while (child < keys.size() && compare(key, keys.get(child)) >= 0) child++;
+        boolean underfull = deleteNode(children.get(child), key, rid);
+        // The separator used during an internal borrow/merge must reflect the new minimum.
+        for (int i = 1; i < children.size(); i++)
+            keys.set(i - 1, leftmost(children.get(i)).keys.get(0));
+        if (underfull) rebalanceChild(keys, children, child);
+        // Recompute separators after deletion of a child's minimum key, even without underflow.
+        for (int i = 1; i < children.size(); i++)
+            keys.set(i - 1, leftmost(children.get(i)).keys.get(0));
+        write(page, internal(keys, children));
+        return keys.size() < 8;
+    }
+
+    private void rebalanceChild(List<Object> separators, List<Integer> children, int at) {
+        Node child = read(children.get(at));
+        Node left = at > 0 ? read(children.get(at - 1)) : null;
+        Node right = at + 1 < children.size() ? read(children.get(at + 1)) : null;
+        if (left != null && left.keys.size() > 8) {
+            List<Object> donorKeys = new ArrayList<>(left.keys),
+                    receiverKeys = new ArrayList<>(child.keys);
+            if (child.leaf) {
+                List<List<Map<String, Object>>> donorValues = new ArrayList<>(left.values),
+                        receiverValues = new ArrayList<>(child.values);
+                receiverKeys.add(0, donorKeys.remove(donorKeys.size() - 1));
+                receiverValues.add(0, donorValues.remove(donorValues.size() - 1));
+                write(left.page, leaf(donorKeys, donorValues, left.prev, left.next));
+                write(child.page, leaf(receiverKeys, receiverValues, child.prev, child.next));
+            } else {
+                List<Integer> donorChildren = new ArrayList<>(left.children),
+                        receiverChildren = new ArrayList<>(child.children);
+                receiverKeys.add(0, separators.get(at - 1));
+                receiverChildren.add(0, donorChildren.remove(donorChildren.size() - 1));
+                separators.set(at - 1, donorKeys.remove(donorKeys.size() - 1));
+                write(left.page, internal(donorKeys, donorChildren));
+                write(child.page, internal(receiverKeys, receiverChildren));
+            }
+            return;
+        }
+        if (right != null && right.keys.size() > 8) {
+            List<Object> donorKeys = new ArrayList<>(right.keys),
+                    receiverKeys = new ArrayList<>(child.keys);
+            if (child.leaf) {
+                List<List<Map<String, Object>>> donorValues = new ArrayList<>(right.values),
+                        receiverValues = new ArrayList<>(child.values);
+                receiverKeys.add(donorKeys.remove(0));
+                receiverValues.add(donorValues.remove(0));
+                write(right.page, leaf(donorKeys, donorValues, right.prev, right.next));
+                write(child.page, leaf(receiverKeys, receiverValues, child.prev, child.next));
+            } else {
+                List<Integer> donorChildren = new ArrayList<>(right.children),
+                        receiverChildren = new ArrayList<>(child.children);
+                receiverKeys.add(separators.get(at));
+                receiverChildren.add(donorChildren.remove(0));
+                separators.set(at, donorKeys.remove(0));
+                write(right.page, internal(donorKeys, donorChildren));
+                write(child.page, internal(receiverKeys, receiverChildren));
+            }
+            return;
+        }
+        // Neither sibling can spare a key: keep the left page and remove the right page.
+        int separator = left != null ? at - 1 : at;
+        Node first = left != null ? left : child, second = left != null ? child : right;
+        if (second == null) return; // Only possible for the root's sole child.
+        List<Object> mergedKeys = new ArrayList<>(first.keys);
+        if (child.leaf) {
+            mergedKeys.addAll(second.keys);
+            List<List<Map<String, Object>>> mergedValues = new ArrayList<>(first.values);
+            mergedValues.addAll(second.values);
+            write(first.page, leaf(mergedKeys, mergedValues, first.prev, second.next));
+            if (second.next != null) {
+                Node neighbor = read(second.next);
+                write(
+                        neighbor.page,
+                        leaf(neighbor.keys, neighbor.values, first.page, neighbor.next));
+            }
+        } else {
+            mergedKeys.add(separators.get(separator));
+            mergedKeys.addAll(second.keys);
+            List<Integer> mergedChildren = new ArrayList<>(first.children);
+            mergedChildren.addAll(second.children);
+            write(first.page, internal(mergedKeys, mergedChildren));
+        }
+        separators.remove(separator);
+        children.remove(separator + 1);
+        release(second.page);
+    }
+
+    private void release(int page) {
+        buffer.forceDiscard(page);
+        pages.freePage(page);
     }
 
     synchronized List<Map<String, Object>> search(int id, Object key) {
@@ -196,6 +423,12 @@ final class BPlusTree {
         Set<Integer> seen = new HashSet<>();
         Set<Integer> depths = new HashSet<>();
         validateNode(m.rootPageId, true, 0, m.keyType, seen, depths, leaves);
+        for (Node leaf : leaves)
+            for (List<Map<String, Object>> values : leaf.values) {
+                if ((m.unique && values.size() != 1)
+                        || new HashSet<>(values).size() != values.size())
+                    throw corrupt("唯一约束或 RowId 去重约束损坏", leaf.page);
+            }
         if (depths.size() != 1) throw corrupt("叶深度不一致", null);
         for (int i = 0; i < leaves.size(); i++) {
             Node n = leaves.get(i);

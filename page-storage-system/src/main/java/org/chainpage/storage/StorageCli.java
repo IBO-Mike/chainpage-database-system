@@ -288,6 +288,10 @@ public final class StorageCli {
                     fields(q, "requestId", "op");
                     d.putAll(s.recover());
                 }
+                case "checkpoint" -> {
+                    fields(q, "requestId", "op");
+                    d.putAll(s.checkpoint());
+                }
                 case "lock_page" -> {
                     fields(q, "requestId", "op", "pageId", "mode", "owner");
                     d.putAll(s.lockPage(integer(q, "pageId"), str(q, "mode"), str(q, "owner")));
