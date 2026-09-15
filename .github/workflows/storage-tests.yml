@@ -1,4 +1,4 @@
-name: page-storage-tests
+name: three-module-storage-integration
 
 on:
   push:
@@ -6,6 +6,9 @@ on:
   pull_request:
     paths:
       - 'page-storage-system/**'
+      - 'database-engine/**'
+      - 'sql-compiler/**'
+      - 'pom.xml'
       - '.github/workflows/storage-tests.yml'
 
 jobs:
@@ -25,34 +28,26 @@ jobs:
           java-version: '17'
           cache: maven
           cache-dependency-path: '**/pom.xml'
-      - name: Build and test the real three-module combination
+      - name: Build and test the current three-module branch
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          git worktree add --detach ../chainpage-ci-integration ddb0dd7ca677da64f7b65f101a22402826fa81f7
-          if ($LASTEXITCODE -ne 0) { throw 'Cannot create isolated integration checkout' }
-          git -C ../chainpage-ci-integration restore --source="$env:GITHUB_SHA" --worktree -- page-storage-system
-          if ($LASTEXITCODE -ne 0) { throw 'Cannot select the current OS implementation' }
-          ./page-storage-system/verification/apply-main-windows-test-fix.ps1 -IntegrationCheckout ../chainpage-ci-integration
-          Push-Location ../chainpage-ci-integration
-          try {
-            mvn --batch-mode clean verify
-            if ($LASTEXITCODE -ne 0) { throw 'Three-module Maven verification failed' }
-          } finally { Pop-Location }
-          ./page-storage-system/verification/verify-sql-integration.ps1 -DatabaseJar ../chainpage-ci-integration/database-engine/target/chainpage-db.jar -EvidenceDirectory ../chainpage-ci-evidence -CliArguments @('--json')
+          mvn --batch-mode clean verify
+          if ($LASTEXITCODE -ne 0) { throw 'Three-module Maven verification failed' }
+          ./page-storage-system/verification/verify-sql-integration.ps1 -DatabaseJar ./database-engine/target/chainpage-db.jar -EvidenceDirectory ./ci-sql-evidence -CliArguments @('--json')
       - name: Collect evidence inside the checkout
         if: always()
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Path ci-evidence -Force | Out-Null
           foreach ($module in @('sql-compiler', 'page-storage-system', 'database-engine')) {
-            $reports = "../chainpage-ci-integration/$module/target/surefire-reports"
+            $reports = "$module/target/surefire-reports"
             if (Test-Path -LiteralPath $reports) {
               Copy-Item -LiteralPath $reports -Destination "ci-evidence/$module" -Recurse
             }
           }
-          if (Test-Path -LiteralPath ../chainpage-ci-evidence) {
-            Copy-Item -LiteralPath ../chainpage-ci-evidence -Destination ci-evidence/sql -Recurse
+          if (Test-Path -LiteralPath ci-sql-evidence) {
+            Copy-Item -LiteralPath ci-sql-evidence -Destination ci-evidence/sql -Recurse
           }
       - name: Preserve test and actual SQL evidence
         if: always()
