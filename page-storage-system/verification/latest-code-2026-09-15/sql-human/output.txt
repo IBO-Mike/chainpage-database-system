@@ -1,0 +1,9 @@
+ChainPage 数据库系统已启动。输入 SQL 执行，输入 quit 或 exit 退出。
+Query OK, 0 rows affected
+Query OK, 1 row affected
++----+-------+
+| id | score |
++----+-------+
+| 1  | 96    |
++----+-------+
+1 row in set

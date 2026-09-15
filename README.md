@@ -26,6 +26,9 @@ SQL 编译器（词法、语法、语义、计划）
 
 - [SQL 编译器规约](sql-compiler/sql-compiler-spec.md)
 - [页式存储系统规约](page-storage-system/paged-storage-spec.md)
+- [OS 设计与关键流程](page-storage-system/OS-DESIGN.md)
+- [OS 评分逐项完成报告](page-storage-system/OS-RUBRIC-REPORT.md)
+- [OS 最新代码验证证据](page-storage-system/verification/latest-code-2026-09-15/README.md)
 - [数据库引擎规约](database-engine/database-engine-spec.md)
 
 ## 2. 目录结构

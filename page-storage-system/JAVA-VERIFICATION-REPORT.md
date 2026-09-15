@@ -1,5 +1,7 @@
 # OS / Page Storage Java 验证报告
 
+本文保留早期 Java 重写验证的历史记录。当前最高档补强、真实上层联调、测试数量和性能数据请以 [评分逐项报告](OS-RUBRIC-REPORT.md)、[实际联调报告](OS-INTEGRATION.md) 和 [性能实验](OS-PERFORMANCE.md) 为准。
+
 验证对象：`IBO-Mike/chainpage-database-system` 的 `os-storage-core` 分支，基线提交 `7a4198f117f6716b35256531dd905e554badedca`。验证环境为 Windows 11、Temurin OpenJDK 17.0.20.1、Maven 3.9.16。本次按要求将 `page-storage-system` 统一重写为 Java 17；Python 源码和 Python 测试已移除。
 
 # 总体结论
@@ -180,6 +182,6 @@ list_table_pages
 - 页锁是非阻塞重试模型，没有公平等待队列，竞争很高时可能饥饿。
 - Windows 无通用目录 fsync 接口；文件内容和文件自身已 force，但硬件断电语义仍取决于文件系统和存储控制器。
 
-# 最终可否合并 main
+# 历史阶段的合并判断（已由最新完整合并取代）
 
-**可以合并 main。** 合并依据是当前分支上的 32/32 自动测试、真实 JVM 崩溃恢复矩阵、跨进程锁验证和两次 CLI 持久化验证全部通过。合并时应保留本报告列出的规模限制；若目标是生产级大数据量，再单独安排增量 B+ Tree 更新、overflow page、WAL checkpoint 和更强的磁盘故障注入。
+当时依据 32/32 自动测试、真实 JVM 崩溃恢复矩阵、跨进程锁和两次 CLI 持久化验证，判断可以进入合并阶段。当前 main 已实际合入，增量 B+ Tree 与 WAL checkpoint 也已补充；请以 OS-RUBRIC-REPORT.md 的 239 项最新验证为准。

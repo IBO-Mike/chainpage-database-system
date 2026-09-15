@@ -1,0 +1,14 @@
+{
+  "baselineVersion": "ddb0dd7ca677da64f7b65f101a22402826fa81f7",
+  "baselineJarSha256": "4C24B5ED53A43777AC88AD5A982E1C8B4DFE6E4D927CB683DBE73E77738C29B7",
+  "improvedVersion": "latest-main-integrated-working-tree",
+  "improvedJarSha256": "8F523E224B03FFE3DF4660AC07D62E0469947C42EF8F2E8FBE746DFD4A688435",
+  "java": [
+    "openjdk version \"17.0.20.1\" 2026-08-18",
+    "OpenJDK Runtime Environment Temurin-17.0.20.1+1 (build 17.0.20.1+1)",
+    "OpenJDK 64-Bit Server VM Temurin-17.0.20.1+1 (build 17.0.20.1+1, mixed mode, sharing)"
+  ],
+  "timestamp": "2026-09-15T09:13:18.5254757+08:00",
+  "experimentSourceSha256Lf": "0182f6c29aa96aa69f13b60dc4be44135059c4309265a17a3122075fedf006d7",
+  "note": "The final source only adds SuppressWarnings after this run; executable behavior is unchanged."
+}

@@ -39,7 +39,9 @@ class DatabaseCliTest {
                 )))
         );
 
-        assertEquals("Query OK, 1 row affected\n", output.toString(StandardCharsets.UTF_8));
+        assertEquals(
+                "Query OK, 1 row affected" + System.lineSeparator(),
+                output.toString(StandardCharsets.UTF_8));
     }
 
     @Test
