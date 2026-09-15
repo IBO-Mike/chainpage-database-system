@@ -7,7 +7,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.locks.ReentrantLock;
 
-/** Owns the directory file lock and retires an idle in-process instance when it is reopened. */
+/** 持有存储目录文件锁，并在同进程重新打开时释放空闲旧实例。 */
 final class DirectoryLease implements AutoCloseable {
     private static final Map<Path, DirectoryLease> LIVE = new HashMap<>();
     private final Path key;

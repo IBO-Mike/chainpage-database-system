@@ -9,7 +9,7 @@ import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-/** Invariants and fault boundaries required beyond the small happy-path acceptance cases. */
+/** 覆盖基础验收之外的结构不变量和故障边界。 */
 class HighestStandardTest {
     @TempDir Path dir;
 
@@ -87,7 +87,7 @@ class HighestStandardTest {
         try (StorageManager s = new StorageManager(dir)) {
             int page = s.allocatePage();
             for (int i = 1; i <= 20; i++) s.writePage(page, image(i), null, 0);
-            // Include an explicit update not represented by a dirty frame.
+            // 加入一条不对应脏缓存帧的显式日志更新。
             s.flushAll();
             s.appendLog(0, page, image(20), image(21));
             Map<String, Object> result = s.checkpoint();

@@ -13,7 +13,7 @@ import java.nio.file.*;
 import java.util.Base64;
 import java.util.Map;
 
-/** Shared JSON encoding and file replacement helpers for persistent metadata and journals. */
+/** 为持久化元数据和日志提供统一的 JSON 编解码及文件替换操作。 */
 final class JsonFiles {
     static final ObjectMapper JSON =
             new ObjectMapper()
@@ -45,7 +45,7 @@ final class JsonFiles {
     static void replace(Path path, byte[] bytes) {
         try {
             Files.createDirectories(path.getParent());
-            // Write and force a sibling temporary file before replacing the visible metadata.
+            // 先写入并强制落盘同目录临时文件，再替换正式文件。
             Path tmp =
                     Files.createTempFile(
                             path.getParent(), path.getFileName().toString() + ".", ".tmp");
@@ -74,8 +74,7 @@ final class JsonFiles {
                 }
                 return;
             } catch (AccessDeniedException denied) {
-                // Windows indexers/antivirus may briefly hold the destination. Retry the
-                // same durable temporary image, with a bounded delay; never retry other I/O errors.
+                // Windows 可能短暂占用目标文件，仅对此错误进行有限重试。
                 if (attempt == 4) throw denied;
                 try {
                     Thread.sleep(25L * (attempt + 1));

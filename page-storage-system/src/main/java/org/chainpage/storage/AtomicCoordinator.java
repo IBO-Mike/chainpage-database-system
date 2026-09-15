@@ -8,7 +8,7 @@ import java.security.MessageDigest;
 import java.util.*;
 import java.util.concurrent.Callable;
 
-/** Coordinates multi-file operations with a durable before-image journal for rollback. */
+/** 使用持久化前镜像日志协调多文件操作和失败回滚。 */
 final class AtomicCoordinator {
     static final List<String> FILES =
             List.of("pages.dat", "page_allocation.json", "table_pages.json", "indexes.json");
@@ -38,7 +38,7 @@ final class AtomicCoordinator {
 
     <T> T operation(Callable<T> task) {
         healthy();
-        // Nested operations share the outer snapshot and commit boundary.
+        // 嵌套操作共用最外层快照和提交边界。
         if (active)
             try {
                 return task.call();
@@ -47,7 +47,7 @@ final class AtomicCoordinator {
             } catch (Exception e) {
                 throw new StorageException("STORAGE_INTERNAL_ERROR", e.getMessage(), null, e);
             }
-        // Capture a durable baseline, including the WAL offset, before invoking the task.
+        // 执行任务前保存各文件前镜像和当前 WAL 偏移。
         buffer.flushAll();
         Map<String, Object> state = JsonFiles.map();
         state.put("version", 1);
@@ -71,8 +71,7 @@ final class AtomicCoordinator {
             T out = task.call();
             buffer.flushAll();
             CrashHooks.hit("before_commit");
-            // Removing the undo journal marks the operation committed after dirty pages are
-            // flushed.
+            // 脏页全部落盘后删除 undo 日志，表示操作已经提交。
             Files.delete(journal);
             committed = true;
             JsonFiles.forceDirectory(root);
@@ -104,8 +103,7 @@ final class AtomicCoordinator {
     private void reload() {
         pages.load();
         tables.load();
-        // Restored disk pages must replace any frames from the failed operation before the
-        // index loader reads and validates its tree through BufferPool.
+        // 索引重新加载前清空失败操作留下的缓存帧，确保读取恢复后的磁盘页。
         buffer.clear();
         tree.load();
         wal.bootstrap();
@@ -141,15 +139,14 @@ final class AtomicCoordinator {
             if (!Files.exists(root.resolve("wal.log"))
                     || Files.size(root.resolve("wal.log")) < offset)
                 throw new Exception("walOffset exceeds WAL length");
-            // Validate the whole journal before replacing any file. Corrupt later entries
-            // must not leave an otherwise valid database partially overwritten.
+            // 先完整校验日志再替换文件，避免后续坏记录造成部分恢复。
             for (var entry : restored.entrySet()) {
                 JsonFiles.replace(root.resolve(entry.getKey()), entry.getValue());
                 CrashHooks.hit("during_restore");
             }
             try (FileChannel ch =
                     FileChannel.open(root.resolve("wal.log"), StandardOpenOption.WRITE)) {
-                // Discard WAL entries from the operation whose file snapshots were just restored.
+                // 丢弃本次失败操作在快照之后追加的 WAL 记录。
                 ch.truncate(offset);
                 ch.force(true);
             }

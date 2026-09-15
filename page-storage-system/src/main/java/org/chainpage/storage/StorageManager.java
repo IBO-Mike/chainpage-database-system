@@ -5,7 +5,7 @@ import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.locks.ReentrantLock;
 
-/** Public storage facade that wires page I/O, caching, records, indexes and recovery together. */
+/** 存储模块统一入口，负责组织页面、缓存、记录、索引和恢复组件。 */
 public final class StorageManager implements AutoCloseable {
     private final Path root;
     private final DirectoryLease lease;
@@ -36,7 +36,7 @@ public final class StorageManager implements AutoCloseable {
         lease = acquired;
         lease.attach(guard);
         try {
-            // Roll back incomplete compound operations before loading metadata and replaying WAL.
+            // 先回滚未完成的复合操作，再加载元数据并重放 WAL。
             recoveredOperation = AtomicCoordinator.restore(root);
             pages = new PageManager(root);
             wal = new WalManager(root, pages);
@@ -55,7 +55,7 @@ public final class StorageManager implements AutoCloseable {
         }
     }
 
-    // Serialize facade calls; the reentrant guard also permits nested calls by compound operations.
+    // 串行化外部调用；可重入锁允许复合操作继续调用内部接口。
     private <T> T locked(Callable<T> c) {
         lease.check();
         if (!guard.tryLock()) throw new StorageException("PAGE_LOCK_BUSY", "存储操作正在进行，请重试");
@@ -72,7 +72,7 @@ public final class StorageManager implements AutoCloseable {
         }
     }
 
-    // Add a durable rollback boundary for operations spanning multiple storage files.
+    // 跨多个存储文件的操作统一增加持久化回滚边界。
     private <T> T atom(Callable<T> c) {
         return locked(() -> atomic.operation(c));
     }
@@ -291,7 +291,7 @@ public final class StorageManager implements AutoCloseable {
                 });
     }
 
-    /** Force all dirty pages and pending REDO before atomically compacting the WAL. */
+    /** 落盘脏页并完成待处理 REDO 后，再原子压缩 WAL。 */
     public Map<String, Object> checkpoint() {
         return locked(
                 () -> {

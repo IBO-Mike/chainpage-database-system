@@ -10,7 +10,7 @@ import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-/** Preset, reproducible OS acceptance cases aligned with the course rubric. */
+/** 与课程评分项对应的可复现 OS 验收用例。 */
 class RubricAcceptanceTest {
     @TempDir Path dir;
 
@@ -209,7 +209,7 @@ class RubricAcceptanceTest {
     @Test
     void cacheComparisonProducesReproducibleEvidence() throws Exception {
         List<Map<String, Object>> measurements = new ArrayList<>();
-        // A,B,A,C,A,B repeated: LRU retains hot page A; FIFO does not refresh it on hits.
+        // 重复 A、B、A、C、A、B：LRU 保留热点 A，FIFO 命中时不刷新顺序。
         int[] sequence = {0, 1, 0, 2, 0, 1};
         for (String mode : List.of("DIRECT", "FIFO", "LRU")) {
             try (StorageManager s =
@@ -262,6 +262,7 @@ class RubricAcceptanceTest {
                                 "measurements",
                                 measurements,
                                 "timingNote",
-                                "Elapsed time includes assertions and OS filesystem caching; no timing threshold is asserted.")));
+                                "Elapsed time includes assertions and OS filesystem caching; "
+                                        + "no timing threshold is asserted.")));
     }
 }

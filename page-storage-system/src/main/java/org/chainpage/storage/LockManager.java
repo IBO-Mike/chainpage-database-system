@@ -2,7 +2,7 @@ package org.chainpage.storage;
 
 import java.util.*;
 
-/** Tracks reentrant page read/write locks by logical owner; conflicting requests do not block. */
+/** 按逻辑 owner 管理可重入页级读写锁；冲突请求立即返回。 */
 public final class LockManager {
     private static final class State {
         final Map<String, Integer> readers = new HashMap<>();

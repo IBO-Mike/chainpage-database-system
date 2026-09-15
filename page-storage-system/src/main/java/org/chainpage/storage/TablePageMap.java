@@ -5,7 +5,7 @@ import java.io.IOException;
 import java.nio.file.*;
 import java.util.*;
 
-/** Persists normalized table names and their ordered, exclusively owned page lists. */
+/** 持久化规范化表名与有序页列表，并保证页面只归属一张表。 */
 final class TablePageMap {
     private final Path path;
     private final PageManager pages;

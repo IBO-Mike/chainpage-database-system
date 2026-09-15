@@ -35,8 +35,7 @@ class CrashRecoveryTest {
             throws Exception {
         prepare();
         if (action.equals("delete")) {
-            // Incremental deletion frees pages only on an actual merge. Prepare two
-            // half-full leaves, so deleting key 0 exercises merge and root collapse.
+            // 准备两个半满叶节点，使删除 key=0 必然覆盖合并和根收缩。
             try (StorageManager s = new StorageManager(dir, 4, "LRU", true)) {
                 s.indexInsert(1, 16, rid(16));
                 s.indexDelete(1, 16, null);

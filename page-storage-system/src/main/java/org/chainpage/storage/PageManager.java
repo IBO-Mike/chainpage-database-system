@@ -5,7 +5,7 @@ import java.io.IOException;
 import java.nio.file.*;
 import java.util.*;
 
-/** Persists allocated/free page sets and generation numbers used to identify page reuse. */
+/** 管理页面分配、释放和复用，并持久化页集合及分配代数。 */
 public final class PageManager {
     private final Path meta;
     private final FileManager file;
@@ -63,7 +63,7 @@ public final class PageManager {
             int pages = Math.toIntExact(full);
             if (allocated.stream().anyMatch(i -> i >= pages)
                     || free.stream().anyMatch(i -> i >= pages)) throw corrupt("页号超出数据文件");
-            // Complete pages absent from metadata can be reclaimed after an interrupted allocation.
+            // 数据文件中未登记的完整页视为中断分配遗留，可重新回收。
             boolean changed = false;
             for (int i = 0; i < pages; i++)
                 if (!allocated.contains(i) && !free.contains(i)) {
@@ -101,7 +101,7 @@ public final class PageManager {
     }
 
     public synchronized int allocatePage() {
-        // Reuse the lowest free ID, zero its contents, then publish a new generation.
+        // 优先复用最小空闲页号，清零页面后再发布新的 generation。
         boolean reuse = !free.isEmpty();
         int id = reuse ? free.first() : Math.toIntExact(file.pageCount());
         long old = generation(id);

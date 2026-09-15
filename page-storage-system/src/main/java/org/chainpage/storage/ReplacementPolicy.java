@@ -2,7 +2,7 @@ package org.chainpage.storage;
 
 import java.util.*;
 
-/** Tracks replacement order independently of the page contents held by BufferPool. */
+/** 独立维护缓存页的淘汰顺序，不保存页面内容。 */
 interface ReplacementPolicy {
     void insert(int id);
 
@@ -29,7 +29,7 @@ interface ReplacementPolicy {
     }
 
     final class Lru extends Base {
-        // Access-order mode moves a page to the newest position on get/put.
+        // access-order 模式会在访问后把页面移动到队尾。
         private final LinkedHashMap<Integer, Boolean> order = new LinkedHashMap<>(16, .75f, true);
 
         public void insert(int i) {
@@ -57,7 +57,7 @@ interface ReplacementPolicy {
     }
 
     final class Fifo extends Base {
-        // Insertion order remains unchanged by reads, giving FIFO its eviction order.
+        // 读取不改变插入顺序，因此队首始终是 FIFO 淘汰页。
         private final LinkedHashSet<Integer> order = new LinkedHashSet<>();
 
         public void insert(int i) {
@@ -83,7 +83,7 @@ interface ReplacementPolicy {
         }
     }
 
-    /** Second-chance replacement: a circular hand clears reference bits before eviction. */
+    /** CLOCK 二次机会算法：环形指针先清引用位，再选择淘汰页。 */
     final class Clock extends Base {
         private static final class Entry {
             final int id;
@@ -138,7 +138,7 @@ interface ReplacementPolicy {
 
         public int victim(Set<Integer> residents) {
             validate(residents, entries.keySet());
-            // At most two rotations: known pages outside the candidate set are skipped.
+            // 跳过候选集合外的页面，引用位清零后下一轮即可选出淘汰页。
             while (true) {
                 Entry candidate = hand;
                 hand = hand.next;

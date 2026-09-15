@@ -9,10 +9,7 @@ import java.nio.file.*;
 import java.security.MessageDigest;
 import java.util.*;
 
-/**
- * Persists page-image UPDATE and APPLIED records and replays unapplied updates during REDO
- * recovery.
- */
+/** 持久化页面镜像的 UPDATE/APPLIED 记录，并在 REDO 恢复时重放未应用更新。 */
 final class WalManager {
     record Update(long seq, int tx, int page, long generation, byte[] before, byte[] after) {}
 
@@ -89,7 +86,7 @@ final class WalManager {
     synchronized Map<String, Object> recover() {
         healthy();
         Parsed p = parse();
-        // The highest applied sequence for each allocation prevents replaying an older page image.
+        // 每次页面分配只保留最高已应用序号，避免重放更旧的页面镜像。
         Map<String, Long> water = new HashMap<>();
         for (long seq : p.applied) {
             Update u = p.updates.get(seq);
@@ -100,7 +97,7 @@ final class WalManager {
         for (Update u : p.updates.values()) {
             if (p.applied.contains(u.seq)) continue;
             pending.add(u.seq);
-            // A freed or reused page no longer belongs to this logged allocation.
+            // 已释放或重新分配的页面不再属于该日志记录。
             if (!pages.isAllocated(u.page) || pages.generation(u.page) != u.generation) continue;
             if (u.seq <= water.getOrDefault(u.page + ":" + u.generation, 0L)) continue;
             pages.writePage(u.page, u.after);
@@ -126,7 +123,7 @@ final class WalManager {
     private record Parsed(
             LinkedHashMap<Long, Update> updates, Set<Long> applied, long nextSequence) {}
 
-    /** Compact only after callers have forced pages and completed REDO for pending records. */
+    /** 仅在页面落盘且待处理 REDO 完成后压缩日志。 */
     synchronized Map<String, Object> checkpoint() {
         healthy();
         Parsed parsed = parse();
@@ -136,7 +133,7 @@ final class WalManager {
         long sequence = parsed.nextSequence - 1;
         byte[] marker = encodedRecord(Map.of("kind", "CHECKPOINT", "logSeq", sequence));
         CrashHooks.hit("checkpoint_before_replace");
-        // Atomic sibling-file replacement leaves either the old valid WAL or this valid marker.
+        // 原子替换保证磁盘上保留旧 WAL 或新的有效检查点记录。
         JsonFiles.replace(path, marker);
         CrashHooks.hit("checkpoint_after_replace");
         next = parsed.nextSequence;
@@ -221,7 +218,7 @@ final class WalManager {
         }
     }
 
-    // Only newline-terminated records are complete; discard an interrupted final append.
+    // 只有换行结尾的记录才完整；启动时截断中断写入的尾记录。
     private void truncateTail() {
         try {
             byte[] all = Files.readAllBytes(path);

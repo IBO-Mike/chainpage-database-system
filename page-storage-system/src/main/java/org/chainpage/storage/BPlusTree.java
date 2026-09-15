@@ -7,7 +7,7 @@ import java.nio.ByteOrder;
 import java.nio.file.*;
 import java.util.*;
 
-/** Page-backed B+ tree with local splits, borrowing/merging and byte-aware variable keys. */
+/** 基于页面的 B+ 树，支持局部分裂、借位合并和变长键容量检查。 */
 final class BPlusTree {
     private static final int MAGIC = 0x43504231, HEADER = 8, MAX_KEYS = 16, MAX_KEY_BYTES = 1024;
 
@@ -207,7 +207,7 @@ final class BPlusTree {
                 internal(
                         keys.subList(cut + 1, keys.size()),
                         children.subList(cut + 1, children.size())));
-        // The middle separator is promoted, rather than duplicated in an internal child.
+        // 中间分隔键提升到父节点，不在内部子节点中重复保留。
         return new Split(keys.get(cut), right);
     }
 
@@ -296,11 +296,11 @@ final class BPlusTree {
         int child = 0;
         while (child < keys.size() && compare(key, keys.get(child)) >= 0) child++;
         boolean underfull = deleteNode(children.get(child), key, rid);
-        // The separator used during an internal borrow/merge must reflect the new minimum.
+        // 借位或合并前，先让分隔键反映各右侧子树的新最小键。
         for (int i = 1; i < children.size(); i++)
             keys.set(i - 1, leftmost(children.get(i)).keys.get(0));
         if (underfull) rebalanceChild(keys, children, child);
-        // Recompute separators after deletion of a child's minimum key, even without underflow.
+        // 即使没有下溢，删除子树最小键后也要重新计算分隔键。
         for (int i = 1; i < children.size(); i++)
             keys.set(i - 1, leftmost(children.get(i)).keys.get(0));
         write(page, internal(keys, children));
@@ -353,10 +353,10 @@ final class BPlusTree {
             }
             return;
         }
-        // Neither sibling can spare a key: keep the left page and remove the right page.
+        // 相邻节点都不能借位时，保留左页并合并释放右页。
         int separator = left != null ? at - 1 : at;
         Node first = left != null ? left : child, second = left != null ? child : right;
-        if (second == null) return; // Only possible for the root's sole child.
+        if (second == null) return; // 仅根节点只剩一个子节点时出现。
         List<Object> mergedKeys = new ArrayList<>(first.keys);
         if (child.leaf) {
             mergedKeys.addAll(second.keys);
@@ -416,7 +416,7 @@ final class BPlusTree {
         }
     }
 
-    /** Validates routing, occupancy, depth, page ownership and both leaf links. */
+    /** 校验路由、节点占用率、树高、页面归属及双向叶链。 */
     synchronized Stats validate(int id) {
         Meta m = meta(id);
         List<Node> leaves = new ArrayList<>();
@@ -488,7 +488,7 @@ final class BPlusTree {
         return all;
     }
 
-    // Rebuild leaves and then parent levels; mutations do not use incremental split/merge logic.
+    // 重建路径先生成叶层，再逐层生成父节点，不复用增量分裂逻辑。
     private void rebuild(int id, Meta oldMeta, Map<String, List<Map<String, Object>>> all) {
         List<Integer> old = collect(oldMeta.rootPageId);
         List<Object> keys = all.keySet().stream().map(BPlusTree::untoken).toList();
@@ -556,7 +556,7 @@ final class BPlusTree {
             level = next;
             first = nextFirst;
         }
-        // Publish the new root before discarding and freeing the old tree pages.
+        // 先持久化新根，再丢弃并释放旧树页面。
         indexes.put(id, new Meta(level.get(0), oldMeta.unique, oldMeta.keyType));
         persist();
         for (int p : old) {
@@ -566,7 +566,7 @@ final class BPlusTree {
         validate(id);
     }
 
-    // Distribute entries evenly so the final group is not left sparsely populated.
+    // 均匀分组，避免最后一个节点过于稀疏。
     private static List<int[]> balanced(int count, int max) {
         if (count == 0) return List.of();
         int groups = (count + max - 1) / max, base = count / groups, extra = count % groups, at = 0;
@@ -612,7 +612,7 @@ final class BPlusTree {
         }
     }
 
-    // A separator belongs to the child on its right, including keys equal to the separator.
+    // 分隔键属于右侧子树，相等键也应向右查找。
     private Node findLeaf(int page, Object key) {
         Set<Integer> seen = new HashSet<>();
         while (true) {

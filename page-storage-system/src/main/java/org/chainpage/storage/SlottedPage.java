@@ -6,10 +6,7 @@ import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 
-/**
- * Encodes records in a page with a slot directory, allowing record bytes to move without
- * renumbering live slots.
- */
+/** 在页面中使用槽目录存放记录；记录移动时不改变有效槽号。 */
 final class SlottedPage {
     static final int HEADER = 10, SLOT = 8;
     private static final int MAGIC = 0x43505331;
@@ -72,7 +69,7 @@ final class SlottedPage {
                             || e.getValue() instanceof Long))
                 throw new StorageException("ROW_INVALID", "Row 只支持字符串字段名及 INT/VARCHAR 值");
         byte[] data = JsonFiles.compactBytes(row);
-        // Reuse a deleted slot before growing the directory, which costs SLOT extra bytes.
+        // 优先复用已删除槽位，避免槽目录额外增长。
         int id = -1;
         for (int i = 0; i < slots.size(); i++)
             if (slots.get(i).deleted) {
@@ -123,7 +120,7 @@ final class SlottedPage {
         if (freeBytes() < 0) throw new StorageException("PAGE_NO_SPACE", "记录超过页容量");
         byte[] raw = new byte[4096];
         ByteBuffer b = ByteBuffer.wrap(raw).order(ByteOrder.BIG_ENDIAN);
-        // The directory grows forward from the header; compacted record data grows backward.
+        // 目录向后写，记录数据从页尾向前紧凑排列。
         int cursor = 4096;
         List<int[]> layout = new ArrayList<>();
         for (Entry e : slots) {

@@ -5,7 +5,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.file.*;
 
-/** Performs fixed-size page I/O in pages.dat; page allocation is managed by PageManager. */
+/** 负责 pages.dat 的定长页面读写；页面分配由 PageManager 管理。 */
 public final class FileManager {
     public static final int PAGE_SIZE = 4096;
     private final Path path;

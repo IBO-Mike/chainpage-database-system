@@ -3,7 +3,7 @@ package org.chainpage.storage;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
-/** Injects abrupt process termination at named persistence boundaries for recovery tests. */
+/** 在指定持久化边界模拟进程中止，用于崩溃恢复测试。 */
 final class CrashHooks {
     private static final String POINT = System.getenv("CHAINPAGE_CRASH_POINT");
     private static final int TARGET =

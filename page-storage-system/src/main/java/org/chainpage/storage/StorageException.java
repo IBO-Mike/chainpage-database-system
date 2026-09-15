@@ -3,7 +3,7 @@ package org.chainpage.storage;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-/** Carries a stable storage error code and optional page context for CLI error responses. */
+/** 携带稳定错误码和可选页号，供 CLI 返回结构化错误。 */
 public final class StorageException extends RuntimeException {
     private final String code;
     private final Integer pageId;

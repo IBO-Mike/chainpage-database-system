@@ -2,14 +2,14 @@ package org.chainpage.storage;
 
 import java.util.*;
 
-/** Caches fixed-size pages and coordinates replacement, page locks and WAL-backed dirty writes. */
+/** 缓存定长页，并协调页面替换、页锁和 WAL 脏页写入。 */
 public final class BufferPool {
     private static final class Frame {
         byte[] data;
-        // A reused page ID must not inherit cached bytes from its previous allocation.
+        // generation 用于防止复用页号读到上一次分配的缓存内容。
         long generation;
         boolean dirty;
-        // UPDATE sequence numbers to acknowledge only after this frame reaches disk.
+        // 记录该帧对应的 UPDATE 序号，页面落盘后才能标记 APPLIED。
         final List<Long> lsns = new ArrayList<>();
 
         Frame(byte[] d, long g, boolean x) {
@@ -88,8 +88,7 @@ public final class BufferPool {
                 victim = e[0] < 0 ? null : e[0];
                 flushed = e[1] < 0 ? null : e[1];
             }
-            // Persist UPDATE before publishing new bytes in memory; a WAL failure must not
-            // leave an unlogged dirty image available for a later flush.
+            // 先持久化 UPDATE，再发布新的缓存内容，避免未记录的脏页被后续刷盘。
             Long sequence =
                     willBeDirty && !Arrays.equals(before, data)
                             ? wal.append(tx, id, before, data)
@@ -108,7 +107,7 @@ public final class BufferPool {
         }
     }
 
-    /** Direct I/O stays coherent with dirty frames and REDO; it does not load or evict pages. */
+    /** 直接写仍遵守页锁和 WAL，并使旧缓存失效；该操作不触发加载或淘汰。 */
     synchronized void writeDirect(int id, byte[] data) {
         FileManager.page(data, id);
         pages.requireAllocated(id);
@@ -116,8 +115,7 @@ public final class BufferPool {
             Frame resident = frames.get(id);
             byte[] before = resident == null ? pages.readPage(id) : resident.data.clone();
             long sequence = wal.append(0, id, before, data);
-            // Retire the stale frame as soon as UPDATE is durable: even an I/O failure leaves
-            // recovery as the authority, rather than allowing old dirty bytes to overwrite it.
+            // UPDATE 持久化后立即移除旧帧，写盘失败时由恢复流程接管。
             frames.remove(id);
             policy.remove(id);
             pages.writePage(id, data);
@@ -169,7 +167,7 @@ public final class BufferPool {
             f.lsns.clear();
             return false;
         }
-        // Force page data before APPLIED markers so recovery never skips an unpersisted write.
+        // 必须先写页面再记录 APPLIED，防止恢复时跳过尚未落盘的数据。
         pages.writePage(id, f.data);
         pages.sync();
         for (long l : f.lsns) wal.applied(l);

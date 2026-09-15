@@ -6,7 +6,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.*;
 
-/** Exposes StorageManager through one UTF-8 JSON request and response per line. */
+/** 通过 UTF-8 JSONL 暴露 StorageManager，每行对应一次请求和响应。 */
 public final class StorageCli {
     public static void main(String[] args) throws Exception {
         Path root = Path.of("storage-data");
