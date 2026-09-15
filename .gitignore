@@ -1,1 +1,8 @@
-docs/
+docs/*
+!docs/三模块整合步骤与代码修改记录.md
+!docs/mike/
+docs/mike/*
+!docs/mike/项目展示SQL用例.md
+database-engine/docs-mike/
+.DS_Store
+**/target/
