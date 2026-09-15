@@ -1,6 +1,8 @@
 {
   "newMainRevision": "ddb0dd7ca677da64f7b65f101a22402826fa81f7",
   "integratedRevision": "a01e1761a961932a4ab86dc15c3a9f484da7704f",
+  "verificationRevision": "e3bc1c4d7a1c3a32644d82471942245b98ce024f",
+  "ciRun": "https://github.com/IBO-Mike/chainpage-database-system/actions/runs/34916979424",
   "sourceSha256Lf": {
     "page-storage-system/src/main/java/org/chainpage/storage/AtomicCoordinator.java": "33d0e2766c65e0a81b831763eb50ffcf878954c28a755ff8869c1debb3db0ec7",
     "page-storage-system/src/main/java/org/chainpage/storage/BPlusTree.java": "e700a6a38a032e46e2984eeae94adb330cfb3aca42f9188093fbcbbd802c4e72",

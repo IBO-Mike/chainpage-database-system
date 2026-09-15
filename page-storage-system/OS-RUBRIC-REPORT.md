@@ -6,7 +6,7 @@
 
 远端最新 main 为 `ddb0dd7ca677da64f7b65f101a22402826fa81f7`。本次先把它完整合入 OS 分支，合并提交为 `65458581bfdbf87ad6f4a3ae54fcc10e4bc2d9eb`。Git 历史证明 ddb0dd7 相对共同基线没有修改 `page-storage-system`，新上传的是完整编译器、引擎、CLI 和项目材料；此前 OS 分支缺少这些上层文件的问题已经解决。
 
-本报告的测试、SQL 和性能数据全部重新从完整分支产生，不沿用旧代码结论。首次验证提交 `a01e1761a961932a4ab86dc15c3a9f484da7704f` 已通过 Ubuntu/Windows CI。main 引用保持 ddb0dd7，没有修改或推送 main，没有合并 PR。
+本报告的测试、SQL 和性能数据全部重新从完整分支产生，不沿用旧代码结论。集成验证提交 `a01e1761a961932a4ab86dc15c3a9f484da7704f` 已通过 Ubuntu/Windows CI；更新 Actions 版本后的提交 `e3bc1c4d7a1c3a32644d82471942245b98ce024f` 也在两个平台通过。main 引用保持 ddb0dd7，没有修改或推送 main，没有合并 PR。
 
 ## 一、基本功能（40 分）
 

@@ -9,7 +9,7 @@
 | `maven-final.log` | 根目录 `mvn -B clean verify` 成功原始日志 |
 | `main-os-baseline-build.log` | 最新 main 自带 OS 的 32 项独立测试成功日志 |
 | `maven-before-newline-fix.log` | 新上层测试固定 LF 在 Windows 失败的原始日志 |
-| `ci-result.json` | a01e176 的 Ubuntu/Windows 成功状态 |
+| `ci-result.json` | e3bc1c4（当前 Actions 版本）的 Ubuntu/Windows 成功状态 |
 | `sql-json/` | 11 条请求、两个 JVM 的输入、输出、stderr 和断言摘要 |
 | `sql-human/` | 最新 HUMAN CLI 的 SQL 文件、表格输出和 stderr |
 | `performance/` | 最新 main OS 与改进版的原始多轮 JSON 和 JAR 摘要 |

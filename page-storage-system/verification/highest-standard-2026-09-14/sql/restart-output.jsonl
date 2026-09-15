@@ -1,3 +1,0 @@
-{"ok":true,"data":{"results":[{"statementIndex":0,"kind":"SELECT","result":{"kind":"SELECT","columns":["id","name","age"],"rows":[[2,"Bob",17]],"affectedRows":0,"message":"1 row selected"}}],"error":null},"error":null}
-{"ok":true,"data":{"results":[{"statementIndex":0,"kind":"INSERT","result":{"kind":"INSERT","columns":[],"rows":[],"affectedRows":1,"message":"1 row inserted"}}],"error":null},"error":null}
-{"ok":true,"data":{"results":[{"statementIndex":0,"kind":"SELECT","result":{"kind":"SELECT","columns":["id","name"],"rows":[[3,"Carol"]],"affectedRows":0,"message":"1 row selected"}}],"error":null},"error":null}
