@@ -1,0 +1,42 @@
+{
+  "samples" : [ {
+    "mode" : "scan",
+    "round" : 0,
+    "queries" : 64,
+    "nanos" : 209414700,
+    "pageFileReads" : 896
+  }, {
+    "mode" : "scan",
+    "round" : 1,
+    "queries" : 64,
+    "nanos" : 194254200,
+    "pageFileReads" : 896
+  }, {
+    "mode" : "scan",
+    "round" : 2,
+    "queries" : 64,
+    "nanos" : 199559300,
+    "pageFileReads" : 896
+  }, {
+    "mode" : "index",
+    "round" : 0,
+    "queries" : 64,
+    "nanos" : 55899200,
+    "pageFileReads" : 181
+  }, {
+    "mode" : "index",
+    "round" : 1,
+    "queries" : 64,
+    "nanos" : 55948500,
+    "pageFileReads" : 181
+  }, {
+    "mode" : "index",
+    "round" : 2,
+    "queries" : 64,
+    "nanos" : 58193400,
+    "pageFileReads" : 181
+  } ],
+  "note" : "Warm-up excluded; all results verified. Timings reflect one host and OS filesystem cache, not physical disk I/O.",
+  "mode" : "lookup",
+  "version" : "latest-main-integrated-working-tree"
+}

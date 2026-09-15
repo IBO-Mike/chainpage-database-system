@@ -1,53 +1,51 @@
-# OS 性能实验与结果分析
+# OS 最新代码性能实验
 
-2026-09-14，Windows 11、Temurin JDK 17.0.20.1、Maven 3.9.16。基线为 `89ed0c458d911c8001115174af1dd8d02c25cbc7`（改进前 core），改进 core 为 `c2f7309dbf4ddeef1688476d4b232176bd74bf87`。同一独立实验程序分别加载两个 shaded JAR，只调用两版共有的公开接口。JAR 和源码摘要见 verification/highest-standard-2026-09-14/manifest.json。
+测试日期为 2026-09-15。基线是最新 main `ddb0dd7ca677da64f7b65f101a22402826fa81f7` 自带的 OS JAR，改进版是完整合并后的 `a01e1761a961932a4ab86dc15c3a9f484da7704f` JAR。两者用同一份 `StoragePerformanceExperiment.java`、相同种子和公开接口顺序运行；所有查询结果及树不变量先通过检查，才记为有效样本。
 
-## 增量索引变更与整树重建基线
+## B+ 树更新：最新 main 与改进版
 
-容量 8、LRU、唯一 INT，Random(4711) 打乱 128 个键后逐一插入，再删除 0–95。每轮独立临时数据库；一轮预热不计入，五轮有效样本。插入、删除后完整范围结果与独立有序预期一致，并验证树不变量。下表为五轮中位数；写页为 dirty flush 次数，不是包括 WAL/元数据/undo 的全部 I/O。
+容量 8、LRU、唯一 INT 索引。固定打乱 128 个键并逐个插入，再删除 0–95；一轮预热排除，五轮有效样本取中位数。
 
-| 操作 | 基线写页 | 改进写页 | 写页减少 | 基线秒 | 改进秒 | 本机耗时比 |
+| 操作 | main 写页 | 改进写页 | 减少 | main 耗时 | 改进耗时 | 本机耗时比 |
 |---|---:|---:|---:|---:|---:|---:|
-| 插入 128 键 | 688 | 155 | 77.47% | 28.195 | 2.554 | 11.04× |
-| 删除 96 键 | 618 | 248 | 59.87% | 24.670 | 3.303 | 7.47× |
+| 插入 128 键 | 688 | 155 | 77.47% | 23.028 s | 3.546 s | 6.49× |
+| 删除 96 键 | 618 | 248 | 59.87% | 20.000 s | 4.165 s | 4.80× |
 
-局部分裂/重平衡避免每次改动写出整棵树。该效果适用于本实验的唯一 INT；不推断变长/非唯一删除也有相同收益。整体操作仍包括全树验证和全文件 undo，不能宣称整体 O(log N)。基线运行期间有一次本地回归构建重叠，系统负载与 Windows 文件扫描未严格控制，因此耗时比仅作为观察；确定的算法写页计数比耗时更可靠。
+main 每次变更重建整棵树；改进版插入沿搜索路径局部分裂，唯一 INT 删除采用借位、合并和根收缩。写页数直接反映算法改进。耗时受 Windows 文件系统、JVM 和系统负载影响，只作为本机观察，不承诺固定加速倍数。变长键和非唯一索引删除仍走安全重建回退，因此不推广上述删除收益。
 
-最初两次工作区内基线实验遇到 Windows AccessDeniedException，未产生有效样本，未纳入比较。最终基线和改进都使用同样的系统临时目录策略成功完成。改进后的文件替换增加有限 AccessDenied 重试，其他 I/O 错误仍传播。
+## 缓存策略四种负载
 
-## 四种缓存负载
-
-每负载 1024 次访问、32 页、容量 8、固定 Random(20260914)。DIRECT/FIFO/LRU/CLOCK 各一轮预热、三轮有效样本，共 48 个有效样本；逐次验证完整 4096 字节。每轮新实例、冷 BufferPool，初始化写入排除在访问计时外。表中页文件读取为三轮中位数（本次各轮计数一致）。
+32 页、容量 8，每种工作负载 1024 次访问。DIRECT、FIFO、LRU、CLOCK 各一轮预热和三轮有效样本，共 48 个样本；每次读取核对完整 4096 字节。表内为三轮页文件读取中位数。
 
 | 负载 | DIRECT | FIFO | LRU | CLOCK |
 |---|---:|---:|---:|---:|
-| hotspot | 1024 | 294 | 180 | 217 |
-| sequential | 1024 | 1024 | 1024 | 1024 |
-| random | 1024 | 781 | 772 | 773 |
-| working-set | 1024 | 6 | 6 | 6 |
+| 80% 四页热点 | 1024 | 294 | 180 | 217 |
+| 32 页循环顺序 | 1024 | 1024 | 1024 | 1024 |
+| 32 页均匀随机 | 1024 | 781 | 772 | 773 |
+| 6 页工作集 | 1024 | 6 | 6 | 6 |
 
-hotspot：80% 访问四个热页，其余访问冷页；LRU 最少读页，CLOCK 位于 LRU/FIFO 之间。sequential：循环 32 页超过容量，三种策略都无收益。random：均匀访问，差距较小。working-set：只访问六页，可全部驻留，三种策略都只发生六次冷 miss。不能把 CLOCK 宣称为普遍优于 LRU；其价值是用引用位和循环指针提供另一种成本与淘汰取舍。
+热点负载下 LRU 最少读页，CLOCK 介于 LRU 与 FIFO 之间；循环扫描超过容量时三种策略都无收益；六页可全部驻留时都只产生六次冷 miss。结果说明策略应按负载选择，不能宣称 CLOCK 普遍优于 LRU。
 
-## 索引点查与完整表扫描
+## B+ 树点查与完整表扫描
 
-同一持久化数据集：256 条记录，每条包含 id 和 180 字符 label；真实 SlottedPage 跨 14 个表页，唯一 INT 索引。两种方法均执行 64 个相同点查询 `(query*71)%256`，返回并逐次校验完整记录；索引法计入 RowId 后读取记录的开销。每种一轮预热、三轮有效样本。实例启动/恢复/索引加载在计时外，BufferPool 状态不是严格冷缓存。
+数据集包含 256 条跨 14 个 Slotted Page 的记录，每条有 INT id 和 180 字符 label。两种方法执行同样的 64 个点查询并返回完整记录；索引路径计入根据 RowId 读取记录页。一轮预热排除，三轮有效样本取中位数。
 
-| 方法 | 页文件读取中位数 | 耗时中位数 ms |
+| 方法 | 页文件读取 | 耗时中位数 |
 |---|---:|---:|
-| 逐页扫描 | 896 | 202.291 |
-| B+ 树点查并取记录 | 181 | 48.219 |
+| 逐页扫描 | 896 | 199.559 ms |
+| B+ 树定位后取记录 | 181 | 55.949 ms |
 
-此数据集索引法少读 79.80% 的页文件，耗时中位数比为 4.20×。这是 OS API 层的实测索引用途；不代表 SQL 优化器一定选择该索引。
+索引路径少读 79.80% 的页文件，本机扫描耗时是索引路径的 3.57 倍。实验验证 OS 索引本身的实际价值；当前 SQL 层没有 `CREATE INDEX` 命令，不能把该结果表述为 SQL 优化器已经自动选择该索引。
 
-## 复现与证据
-
-原始 JSON 位于 verification/highest-standard-2026-09-14/performance/。每轮计数、纳秒耗时、参数和版本均保留，无耗时通过阈值。所有计时包含实际断言、JVM 和操作系统文件缓存；页文件 read 不能等同硬件磁盘 read。
-
-1. 从独立 detached checkout 构建基线 89ed0c4 的 storage-cli.jar，将 JAR 复制到独立路径；另构建当前 OS 的 JAR。不要切换 main 或用正在运行的 JAR 做 clean。
-2. 使用 JDK 17+，在无其他实验 JVM 的情况下运行：
+## 复现与证据边界
 
 ```powershell
-./verification/verify-performance.ps1 -BaselineJar <baseline-storage-cli.jar> -ImprovedJar <target/storage-cli.jar> -EvidenceDirectory <new-directory> -ImprovedVersion <tested-commit>
+./verification/verify-performance.ps1 `
+  -BaselineJar <main-storage-cli.jar> `
+  -ImprovedJar ./target/storage-cli.jar `
+  -EvidenceDirectory <new-directory> `
+  -BaselineVersion ddb0dd7ca677da64f7b65f101a22402826fa81f7 `
+  -ImprovedVersion <current-os-commit>
 ```
 
-脚本顺序执行四个实验组，编译同一实验源码并保存 JAR 摘要。输出目录必须不存在；仅把 results.json/manifest 作为证据归档，临时数据库无需提交。Mutation 在系统临时目录生成数据库，使用完可自行清理 chainpage-mutation-*。
+原始 JSON 和 JAR SHA-256 位于 `verification/latest-code-2026-09-15/performance/`。页文件读取是接口调用或 BufferPool miss 计数，不等同于硬件物理 I/O；实验不设置耗时通过阈值。

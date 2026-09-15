@@ -4,7 +4,7 @@
 
 OS 部分将上层对记录的访问转化为固定 4096 字节数据页的持久化读写，并通过缓存减少页文件读取。对外提供 Java `StorageManager` 和 UTF-8 JSONL `StorageCli`。存储模块不解析 SQL，不创建 SQL 执行计划，也不负责 SQL Catalog 的业务结构。
 
-本分支只保留 OS 实现和上层规约。最新 main 已有 SQL 编译器与数据库引擎，本次在独立目录中将 main 的上层实现与本分支 OS 组合，完整 SQL 链路和跨 JVM 重启已验证。版本与复现步骤见 OS-INTEGRATION.md。
+最新 main 的 SQL 编译器、数据库引擎、CLI 和项目文档已完整合入本分支。根工程可直接构建，不再通过临时目录覆盖 OS；完整 SQL 链路和跨 JVM 重启已验证。版本与复现步骤见 OS-INTEGRATION.md。
 
 ## 模块职责与数据结构
 
@@ -77,7 +77,7 @@ StorageManager 的 guard 串行协调模块，可重入以允许复合操作调�
 
 上层通过 JSONL 发送 `create_table_pages`、`allocate_page_for_table`、`get_page`、`write_page`、`flush_all` 等操作，或使用对应 Java facade。页字节以 Base64 编码，必须解码为 4096 字节。表名大小写不敏感，成功固定 `ok/data`，失败固定 `ok/error`，requestId 原样返回，不适用错误字段为 null。
 
-专项测试启动 StorageCli 子进程验证 OS 边界；补充联调使用 main 的 ChainPageDatabase、CompilerModuleClient 和 PageStorageModuleClient，执行真实 SQL 并在第二 JVM 重启后查询。二者分别提供接口级和系统级证据，见 OS-INTEGRATION.md。
+专项测试启动 StorageCli 子进程验证 OS 边界；根工程联调使用当前分支的 ChainPageDatabase、CompilerModuleClient 和 PageStorageModuleClient，执行真实 SQL 并在第二 JVM 重启后查询。二者分别提供接口级和系统级证据，见 OS-INTEGRATION.md。
 
 ## 答辩准备
 

@@ -1,0 +1,46 @@
+{
+  "mode" : "mutation",
+  "note" : "Warm-up excluded; all results verified. Timings reflect one host and OS filesystem cache, not physical disk I/O.",
+  "samples" : [ {
+    "insertNanos" : 3500390500,
+    "insertCount" : 128,
+    "round" : 0,
+    "deleteNanos" : 4150787800,
+    "deletePageWrites" : 248,
+    "deleteCount" : 96,
+    "insertPageWrites" : 155
+  }, {
+    "insertNanos" : 3546185600,
+    "insertCount" : 128,
+    "round" : 1,
+    "deleteNanos" : 4208784300,
+    "deletePageWrites" : 248,
+    "deleteCount" : 96,
+    "insertPageWrites" : 155
+  }, {
+    "insertNanos" : 3568142400,
+    "insertCount" : 128,
+    "round" : 2,
+    "deleteNanos" : 3757220500,
+    "deletePageWrites" : 248,
+    "deleteCount" : 96,
+    "insertPageWrites" : 155
+  }, {
+    "insertNanos" : 3615069700,
+    "insertCount" : 128,
+    "round" : 3,
+    "deleteNanos" : 4164678200,
+    "deletePageWrites" : 248,
+    "deleteCount" : 96,
+    "insertPageWrites" : 155
+  }, {
+    "insertNanos" : 3290072600,
+    "insertCount" : 128,
+    "round" : 4,
+    "deleteNanos" : 4253629200,
+    "deletePageWrites" : 248,
+    "deleteCount" : 96,
+    "insertPageWrites" : 155
+  } ],
+  "version" : "latest-main-integrated-working-tree"
+}

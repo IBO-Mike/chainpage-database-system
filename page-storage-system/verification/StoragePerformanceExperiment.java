@@ -152,6 +152,7 @@ public final class StoragePerformanceExperiment {
         return sequence;
     }
 
+    @SuppressWarnings("unchecked") // StorageManager's public record contract returns JSON maps.
     private static List<Map<String, Object>> lookups(Path output) {
         List<Map<String, Object>> samples = new ArrayList<>();
         Path root = output.resolve("database");

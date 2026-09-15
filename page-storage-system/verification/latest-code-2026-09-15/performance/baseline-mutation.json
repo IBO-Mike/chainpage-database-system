@@ -1,0 +1,46 @@
+{
+  "version" : "ddb0dd7ca677da64f7b65f101a22402826fa81f7",
+  "samples" : [ {
+    "insertNanos" : 23028176200,
+    "insertPageWrites" : 688,
+    "deleteCount" : 96,
+    "deletePageWrites" : 618,
+    "deleteNanos" : 20143230400,
+    "round" : 0,
+    "insertCount" : 128
+  }, {
+    "insertNanos" : 22330183500,
+    "insertPageWrites" : 688,
+    "deleteCount" : 96,
+    "deletePageWrites" : 618,
+    "deleteNanos" : 19305321900,
+    "round" : 1,
+    "insertCount" : 128
+  }, {
+    "insertNanos" : 22363799700,
+    "insertPageWrites" : 688,
+    "deleteCount" : 96,
+    "deletePageWrites" : 618,
+    "deleteNanos" : 19983023800,
+    "round" : 2,
+    "insertCount" : 128
+  }, {
+    "insertNanos" : 23587843800,
+    "insertPageWrites" : 688,
+    "deleteCount" : 96,
+    "deletePageWrites" : 618,
+    "deleteNanos" : 19999985900,
+    "round" : 3,
+    "insertCount" : 128
+  }, {
+    "insertNanos" : 23519626400,
+    "insertPageWrites" : 688,
+    "deleteCount" : 96,
+    "deletePageWrites" : 618,
+    "deleteNanos" : 20980994700,
+    "round" : 4,
+    "insertCount" : 128
+  } ],
+  "note" : "Warm-up excluded; all results verified. Timings reflect one host and OS filesystem cache, not physical disk I/O.",
+  "mode" : "mutation"
+}

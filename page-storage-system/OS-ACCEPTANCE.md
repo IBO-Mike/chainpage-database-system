@@ -53,11 +53,11 @@ elapsedNanos 记录实际耗时，但包含测试断言、数据比较、JVM 执
 
 ## 已完成真实三模块联调
 
-使用最新 main 的编译器、引擎和适配器，在独立 detached worktree 中配合 OS 分支版本，完成根 Maven clean verify 的 212 项测试。verification/verify-sql-integration.ps1 对真实数据库 jar 执行 CREATE、INSERT、SELECT、DELETE、compile 和错误请求，并以第二 JVM 验证重启后表结构、删除结果和后续读写。版本、预期值、实际响应与复现步骤见 OS-INTEGRATION.md。
+最新 main 已完整合入 OS 分支。当前分支直接执行根 Maven clean verify，共 239 项测试通过。verification/verify-sql-integration.ps1 对当前分支生成的真实数据库 JAR 执行 CREATE、INSERT、SELECT、DELETE、compile 和错误请求，并以第二 JVM 验证重启后表结构、删除结果和后续读写。版本、预期值、实际响应与复现步骤见 OS-INTEGRATION.md。
 
 ## 最高档补强验收（最新结果以评分报告为准）
 
-新增 HighestStandardTest 的 14 项验证；原有 39 项继续保留。
+相对最新 main 自带的 32 项 OS 测试，RubricAcceptanceTest 增加 7 项，HighestStandardTest 增加 14 项，合计 53 项。
 
 | 检查项 | 独立预期与验证内容 |
 |---|---|

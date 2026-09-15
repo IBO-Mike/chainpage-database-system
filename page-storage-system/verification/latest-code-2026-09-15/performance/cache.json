@@ -1,0 +1,390 @@
+{
+  "version" : "latest-main-integrated-working-tree",
+  "mode" : "cache",
+  "note" : "Warm-up excluded; all results verified. Timings reflect one host and OS filesystem cache, not physical disk I/O.",
+  "samples" : [ {
+    "hits" : 0,
+    "pageFileReads" : 1024,
+    "round" : 0,
+    "accesses" : 1024,
+    "nanos" : 257179400,
+    "mode" : "DIRECT",
+    "workload" : "hotspot"
+  }, {
+    "hits" : 0,
+    "pageFileReads" : 1024,
+    "round" : 1,
+    "accesses" : 1024,
+    "nanos" : 250262400,
+    "mode" : "DIRECT",
+    "workload" : "hotspot"
+  }, {
+    "hits" : 0,
+    "pageFileReads" : 1024,
+    "round" : 2,
+    "accesses" : 1024,
+    "nanos" : 226494100,
+    "mode" : "DIRECT",
+    "workload" : "hotspot"
+  }, {
+    "hits" : 730,
+    "pageFileReads" : 294,
+    "round" : 0,
+    "accesses" : 1024,
+    "nanos" : 84093500,
+    "mode" : "FIFO",
+    "workload" : "hotspot"
+  }, {
+    "hits" : 730,
+    "pageFileReads" : 294,
+    "round" : 1,
+    "accesses" : 1024,
+    "nanos" : 93022500,
+    "mode" : "FIFO",
+    "workload" : "hotspot"
+  }, {
+    "hits" : 730,
+    "pageFileReads" : 294,
+    "round" : 2,
+    "accesses" : 1024,
+    "nanos" : 84040700,
+    "mode" : "FIFO",
+    "workload" : "hotspot"
+  }, {
+    "hits" : 844,
+    "pageFileReads" : 180,
+    "round" : 0,
+    "accesses" : 1024,
+    "nanos" : 60075500,
+    "mode" : "LRU",
+    "workload" : "hotspot"
+  }, {
+    "hits" : 844,
+    "pageFileReads" : 180,
+    "round" : 1,
+    "accesses" : 1024,
+    "nanos" : 57110300,
+    "mode" : "LRU",
+    "workload" : "hotspot"
+  }, {
+    "hits" : 844,
+    "pageFileReads" : 180,
+    "round" : 2,
+    "accesses" : 1024,
+    "nanos" : 50159900,
+    "mode" : "LRU",
+    "workload" : "hotspot"
+  }, {
+    "hits" : 807,
+    "pageFileReads" : 217,
+    "round" : 0,
+    "accesses" : 1024,
+    "nanos" : 54061200,
+    "mode" : "CLOCK",
+    "workload" : "hotspot"
+  }, {
+    "hits" : 807,
+    "pageFileReads" : 217,
+    "round" : 1,
+    "accesses" : 1024,
+    "nanos" : 49736100,
+    "mode" : "CLOCK",
+    "workload" : "hotspot"
+  }, {
+    "hits" : 807,
+    "pageFileReads" : 217,
+    "round" : 2,
+    "accesses" : 1024,
+    "nanos" : 49138800,
+    "mode" : "CLOCK",
+    "workload" : "hotspot"
+  }, {
+    "hits" : 0,
+    "pageFileReads" : 1024,
+    "round" : 0,
+    "accesses" : 1024,
+    "nanos" : 234485800,
+    "mode" : "DIRECT",
+    "workload" : "sequential"
+  }, {
+    "hits" : 0,
+    "pageFileReads" : 1024,
+    "round" : 1,
+    "accesses" : 1024,
+    "nanos" : 240042000,
+    "mode" : "DIRECT",
+    "workload" : "sequential"
+  }, {
+    "hits" : 0,
+    "pageFileReads" : 1024,
+    "round" : 2,
+    "accesses" : 1024,
+    "nanos" : 242835900,
+    "mode" : "DIRECT",
+    "workload" : "sequential"
+  }, {
+    "hits" : 0,
+    "pageFileReads" : 1024,
+    "round" : 0,
+    "accesses" : 1024,
+    "nanos" : 248535700,
+    "mode" : "FIFO",
+    "workload" : "sequential"
+  }, {
+    "hits" : 0,
+    "pageFileReads" : 1024,
+    "round" : 1,
+    "accesses" : 1024,
+    "nanos" : 270261100,
+    "mode" : "FIFO",
+    "workload" : "sequential"
+  }, {
+    "hits" : 0,
+    "pageFileReads" : 1024,
+    "round" : 2,
+    "accesses" : 1024,
+    "nanos" : 194813200,
+    "mode" : "FIFO",
+    "workload" : "sequential"
+  }, {
+    "hits" : 0,
+    "pageFileReads" : 1024,
+    "round" : 0,
+    "accesses" : 1024,
+    "nanos" : 210011600,
+    "mode" : "LRU",
+    "workload" : "sequential"
+  }, {
+    "hits" : 0,
+    "pageFileReads" : 1024,
+    "round" : 1,
+    "accesses" : 1024,
+    "nanos" : 220751400,
+    "mode" : "LRU",
+    "workload" : "sequential"
+  }, {
+    "hits" : 0,
+    "pageFileReads" : 1024,
+    "round" : 2,
+    "accesses" : 1024,
+    "nanos" : 224908400,
+    "mode" : "LRU",
+    "workload" : "sequential"
+  }, {
+    "hits" : 0,
+    "pageFileReads" : 1024,
+    "round" : 0,
+    "accesses" : 1024,
+    "nanos" : 220234500,
+    "mode" : "CLOCK",
+    "workload" : "sequential"
+  }, {
+    "hits" : 0,
+    "pageFileReads" : 1024,
+    "round" : 1,
+    "accesses" : 1024,
+    "nanos" : 212487300,
+    "mode" : "CLOCK",
+    "workload" : "sequential"
+  }, {
+    "hits" : 0,
+    "pageFileReads" : 1024,
+    "round" : 2,
+    "accesses" : 1024,
+    "nanos" : 205334900,
+    "mode" : "CLOCK",
+    "workload" : "sequential"
+  }, {
+    "hits" : 0,
+    "pageFileReads" : 1024,
+    "round" : 0,
+    "accesses" : 1024,
+    "nanos" : 180414400,
+    "mode" : "DIRECT",
+    "workload" : "random"
+  }, {
+    "hits" : 0,
+    "pageFileReads" : 1024,
+    "round" : 1,
+    "accesses" : 1024,
+    "nanos" : 203520000,
+    "mode" : "DIRECT",
+    "workload" : "random"
+  }, {
+    "hits" : 0,
+    "pageFileReads" : 1024,
+    "round" : 2,
+    "accesses" : 1024,
+    "nanos" : 236935600,
+    "mode" : "DIRECT",
+    "workload" : "random"
+  }, {
+    "hits" : 243,
+    "pageFileReads" : 781,
+    "round" : 0,
+    "accesses" : 1024,
+    "nanos" : 172230100,
+    "mode" : "FIFO",
+    "workload" : "random"
+  }, {
+    "hits" : 243,
+    "pageFileReads" : 781,
+    "round" : 1,
+    "accesses" : 1024,
+    "nanos" : 171962300,
+    "mode" : "FIFO",
+    "workload" : "random"
+  }, {
+    "hits" : 243,
+    "pageFileReads" : 781,
+    "round" : 2,
+    "accesses" : 1024,
+    "nanos" : 170429300,
+    "mode" : "FIFO",
+    "workload" : "random"
+  }, {
+    "hits" : 252,
+    "pageFileReads" : 772,
+    "round" : 0,
+    "accesses" : 1024,
+    "nanos" : 148710900,
+    "mode" : "LRU",
+    "workload" : "random"
+  }, {
+    "hits" : 252,
+    "pageFileReads" : 772,
+    "round" : 1,
+    "accesses" : 1024,
+    "nanos" : 192931900,
+    "mode" : "LRU",
+    "workload" : "random"
+  }, {
+    "hits" : 252,
+    "pageFileReads" : 772,
+    "round" : 2,
+    "accesses" : 1024,
+    "nanos" : 165579200,
+    "mode" : "LRU",
+    "workload" : "random"
+  }, {
+    "hits" : 251,
+    "pageFileReads" : 773,
+    "round" : 0,
+    "accesses" : 1024,
+    "nanos" : 165216900,
+    "mode" : "CLOCK",
+    "workload" : "random"
+  }, {
+    "hits" : 251,
+    "pageFileReads" : 773,
+    "round" : 1,
+    "accesses" : 1024,
+    "nanos" : 172840500,
+    "mode" : "CLOCK",
+    "workload" : "random"
+  }, {
+    "hits" : 251,
+    "pageFileReads" : 773,
+    "round" : 2,
+    "accesses" : 1024,
+    "nanos" : 212518000,
+    "mode" : "CLOCK",
+    "workload" : "random"
+  }, {
+    "hits" : 0,
+    "pageFileReads" : 1024,
+    "round" : 0,
+    "accesses" : 1024,
+    "nanos" : 198128600,
+    "mode" : "DIRECT",
+    "workload" : "working-set"
+  }, {
+    "hits" : 0,
+    "pageFileReads" : 1024,
+    "round" : 1,
+    "accesses" : 1024,
+    "nanos" : 223944200,
+    "mode" : "DIRECT",
+    "workload" : "working-set"
+  }, {
+    "hits" : 0,
+    "pageFileReads" : 1024,
+    "round" : 2,
+    "accesses" : 1024,
+    "nanos" : 209145700,
+    "mode" : "DIRECT",
+    "workload" : "working-set"
+  }, {
+    "hits" : 1018,
+    "pageFileReads" : 6,
+    "round" : 0,
+    "accesses" : 1024,
+    "nanos" : 2387300,
+    "mode" : "FIFO",
+    "workload" : "working-set"
+  }, {
+    "hits" : 1018,
+    "pageFileReads" : 6,
+    "round" : 1,
+    "accesses" : 1024,
+    "nanos" : 3533200,
+    "mode" : "FIFO",
+    "workload" : "working-set"
+  }, {
+    "hits" : 1018,
+    "pageFileReads" : 6,
+    "round" : 2,
+    "accesses" : 1024,
+    "nanos" : 3170200,
+    "mode" : "FIFO",
+    "workload" : "working-set"
+  }, {
+    "hits" : 1018,
+    "pageFileReads" : 6,
+    "round" : 0,
+    "accesses" : 1024,
+    "nanos" : 2793900,
+    "mode" : "LRU",
+    "workload" : "working-set"
+  }, {
+    "hits" : 1018,
+    "pageFileReads" : 6,
+    "round" : 1,
+    "accesses" : 1024,
+    "nanos" : 3047100,
+    "mode" : "LRU",
+    "workload" : "working-set"
+  }, {
+    "hits" : 1018,
+    "pageFileReads" : 6,
+    "round" : 2,
+    "accesses" : 1024,
+    "nanos" : 6826500,
+    "mode" : "LRU",
+    "workload" : "working-set"
+  }, {
+    "hits" : 1018,
+    "pageFileReads" : 6,
+    "round" : 0,
+    "accesses" : 1024,
+    "nanos" : 3296400,
+    "mode" : "CLOCK",
+    "workload" : "working-set"
+  }, {
+    "hits" : 1018,
+    "pageFileReads" : 6,
+    "round" : 1,
+    "accesses" : 1024,
+    "nanos" : 3090200,
+    "mode" : "CLOCK",
+    "workload" : "working-set"
+  }, {
+    "hits" : 1018,
+    "pageFileReads" : 6,
+    "round" : 2,
+    "accesses" : 1024,
+    "nanos" : 3429700,
+    "mode" : "CLOCK",
+    "workload" : "working-set"
+  } ]
+}

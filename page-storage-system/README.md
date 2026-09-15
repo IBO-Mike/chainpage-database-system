@@ -28,8 +28,8 @@ It reads one UTF-8 JSON request per line and writes one response per line.
   a reproducible DIRECT/FIFO/LRU comparison.
 - [Rubric completion report](OS-RUBRIC-REPORT.md): item-by-item evidence, current results
   and work that still requires a personal demonstration.
-- [Real-module SQL integration](OS-INTEGRATION.md): pinned main and OS revisions,
-  full reactor tests, actual database CLI requests and cross-JVM restart evidence.
+- [Real-module SQL integration](OS-INTEGRATION.md): latest main ancestry, full reactor tests,
+  actual database CLI requests and cross-JVM restart evidence.
 - [Performance evidence](OS-PERFORMANCE.md): baseline versus incremental index updates,
   four cache workloads and full-row index lookup versus table scan.
 
@@ -40,8 +40,8 @@ Run `mvn -B -Dtest=RubricAcceptanceTest test` for the seven focused cases, or
 The highest-tier improvements add incremental B+ tree insertion, local unique-INT deletion,
 CLOCK, coherent direct writes, checksummed WAL records and a manual atomic checkpoint.
 `mvn -B -Dtest=HighestStandardTest test` runs the 14 additional correctness cases.
-The real three-module CI uses pinned main `ddb0dd7`, explicit JSON output and an isolated
-platform-newline test correction; see OS-INTEGRATION.md for the exact combination.
+The branch contains latest main `ddb0dd7`; three-module CI builds that complete branch
+directly on Ubuntu and Windows and runs the actual JSON database CLI twice.
 
 ```text
 read_at / write_at / sync / allocate_page / free_page / read_page

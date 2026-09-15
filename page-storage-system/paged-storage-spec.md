@@ -249,7 +249,7 @@ Table Page Map 是“表到页号的目录”。它让存储引擎知道一张�
 ### 实现说明
 为每页维护读者集合和写者；Buffer Pool 的读、写、刷盘分别在正确的锁范围内执行，最后通过 unlock 释放。
 
-## 实现的兼容扩展（2026-09-14）
+## 实现的兼容扩展（最新完整分支）
 
 - `set_policy` 和 CLI `--policy` 支持 `CLOCK`，原有 LRU/FIFO 字段保持兼容。
 - `checkpoint({"op":"checkpoint","requestId":任意JSON值})` 使用标准响应包络；data 为 `checkpointSeq/beforeBytes/afterBytes/reclaimedBytes`。先刷新并恢复所有页，再原子压缩 WAL；checkpointSeq 为最后 UPDATE 序号，压缩后序号不重置。

@@ -5,7 +5,7 @@ param(
 )
 
 # Run the actual three-module JAR twice against a fresh isolated database.
-# Build the JAR from the documented main + os-storage-core combination first.
+# Build the JAR from the current complete os-storage-core branch first.
 $ErrorActionPreference = 'Stop'
 $jar = (Resolve-Path -LiteralPath $DatabaseJar).Path
 $evidence = [System.IO.Path]::GetFullPath($EvidenceDirectory)
