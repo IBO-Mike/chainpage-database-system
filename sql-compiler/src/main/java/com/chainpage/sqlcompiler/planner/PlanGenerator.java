@@ -9,6 +9,7 @@ import java.util.Set;
 
 /** 将语义已验证的 AST 转为逻辑计划，不查询 Catalog 或重新推导类型。 */
 public final class PlanGenerator {
+    /** 按输入顺序生成计划；任一语句失败时只返回错误，不暴露此前的部分计划。 */
     public BuildPlanResponse buildPlan(BuildPlanRequest request) {
         try {
             if (request == null || request.statements() == null)
@@ -28,6 +29,7 @@ public final class PlanGenerator {
     private Map<String, Object> buildStatement(Map<String, Object> statement) {
         String kind = text(statement, "kind");
         String table = normalize(text(statement, "table"));
+        // 写操作直接携带目标表和操作参数，因此没有子计划，schema 也不表示查询结果列。
         return switch (kind) {
             case "CreateTableStmt" -> {
                 Map<String, Object> plan = node("CreateTable", List.of(), List.of());
@@ -57,12 +59,15 @@ public final class PlanGenerator {
     }
 
     private Map<String, Object> buildSelect(Map<String, Object> statement, String table) {
+        // 使用语义阶段冻结的表结构，才能识别同批次 CREATE 的临时表而不访问持久化目录。
         if (!(statement.get("resolvedTable") instanceof Map<?, ?>))
             throw fail("PLANNER_MISSING_SCHEMA", "SELECT 缺少语义阶段的 resolvedTable 标注", statement);
         Map<String, Object> resolved = object(statement.get("resolvedTable"), statement);
         if (!normalize(text(resolved, "name")).equals(table))
             throw fail("PLANNER_INVALID_AST", "resolvedTable 与查询表不一致", statement);
         List<Map<String, Object>> scanSchema = schema(resolved.get("columns"), statement);
+        // 从叶子向根包装：SeqScan -> 可选 Filter -> Project；父节点消费子节点的输出。
+        // Filter 保留完整行结构，使 WHERE 可以引用未出现在 SELECT 列表中的列。
         Map<String, Object> input = node("SeqScan", List.of(), scanSchema);
         input.put("table", table);
         Map<String, Object> predicate = predicate(statement);
@@ -72,6 +77,7 @@ public final class PlanGenerator {
             input = filter;
         }
         List<String> columns = names(statement.get("columns"), statement);
+        // 星号按表结构中的列顺序展开；显式列列表则保留用户顺序及重复列。
         if (columns.equals(List.of("*")))
             columns = scanSchema.stream().map(column -> (String) column.get("name")).toList();
         List<Map<String, Object>> projected = new ArrayList<>();
@@ -87,6 +93,7 @@ public final class PlanGenerator {
     }
 
     private Map<String, Object> predicate(Map<String, Object> statement) {
+        // 显式 null 表示没有 WHERE；缺字段表示 AST 不完整，不能等同于无条件操作。
         if (!statement.containsKey("where"))
             throw fail("PLANNER_INVALID_AST", "语句缺少 where 字段", statement);
         return statement.get("where") == null ? null : expression(statement.get("where"), statement);
@@ -96,6 +103,7 @@ public final class PlanGenerator {
     private Map<String, Object> expression(Object value, Map<String, Object> owner) {
         Map<String, Object> expr = object(value, owner);
         validateExpression(expr);
+        // 连同 binding、inferredType 和 loc 一起复制，后续优化不会改写原始语义 AST。
         return object(deepCopy(expr), expr);
     }
 
@@ -160,6 +168,7 @@ public final class PlanGenerator {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("kind", kind);
         result.put("children", children);
+        // 各算子独立持有 schema，避免调整一个节点的列信息时影响其他节点。
         result.put("schema", deepCopy(schema));
         return result;
     }

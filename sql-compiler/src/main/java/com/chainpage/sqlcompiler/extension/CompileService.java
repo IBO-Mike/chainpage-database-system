@@ -22,17 +22,21 @@ public final class CompileService {
     public ExtensionResponse compileTokens(String requestId, List<Map<String, Object>> tokens, Map<String, Object> snapshot, boolean optimize) {
         Integer index = null;
         try {
+            // 本批次的 CREATE 只更新私有副本，后续语句可见，但不会把编译当作真正的建表操作。
             Map<String, Object> catalog = map(copy(snapshot));
             // 即使输入没有语句，也必须校验 Catalog，不能把错误快照当作空库。
             ExtensionResponse valid = new ExtensionSemanticAnalyzer().analyze(node("statements", List.of(), "catalogSnapshot", catalog));
             if (!valid.ok()) return failure(requestId, null, valid.error());
             List<StatementRecovery.Segment> segments = new StatementRecovery().segments(tokens);
+            // 恢复解析用于定位各语句错误；统一编译接口仍要求整批语法有效，不返回部分成功结果。
             for (var segment : segments) if (!segment.parsed().ok()) return failure(requestId, segment.statementIndex(), segment.parsed().error());
             List<Map<String, Object>> result = new ArrayList<>();
             for (var segment : segments) {
                 index = segment.statementIndex();
                 ExtensionResponse parsed = segment.parsed();
                 Map<String, Object> ast = nodes(parsed.data().get("statements")).get(0);
+                // 同时检查 AST 和目录能力：即使 SQL 看似简单，扩展类型或 nullable 标注也需扩展路径。
+                // 满足基础契约时保留原有 AST 形状，避免改变基础编译接口的输出。
                 boolean basic = !ast.containsKey("items") && !ast.containsKey("rows") && !"UpdateStmt".equals(ast.get("kind"))
                         && basicCatalog(catalog) && basicCreate(ast)
                         && new com.chainpage.sqlcompiler.ast.AstService().makeNode(new com.chainpage.sqlcompiler.ast.MakeNodeRequest(ast)).ok();
@@ -45,6 +49,7 @@ public final class CompileService {
                     if (!planned.ok()) return failure(requestId, index, planned.error().toMap());
                     plan = planned.plans().get(0);
                 } else {
+                    // 从该语句的 Token 重新构建扩展 AST，再由扩展语义阶段补齐计划所需标注。
                     parsed = StatementRecovery.parseOne(segment.tokens(), true);
                     if (!parsed.ok()) return failure(requestId, index, parsed.error());
                     ast = nodes(parsed.data().get("statements")).get(0);
@@ -56,6 +61,7 @@ public final class CompileService {
                     plan = nodes(planned.data().get("plans")).get(0);
                 }
                 Map<String, Object> optimized = null;
+                // 两条编译路径汇合到同一个公开计划优化入口，响应同时保留优化前后的计划。
                 if (optimize) {
                     var response = new Optimizer().optimize(new OptimizeRequest(plan));
                     if (!response.ok()) return failure(requestId, index, response.error().toMap());
