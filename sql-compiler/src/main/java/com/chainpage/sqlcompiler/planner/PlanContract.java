@@ -6,12 +6,15 @@ import java.util.*;
 public final class PlanContract {
     private static final Set<String> TYPES = Set.of("INT","VARCHAR","BOOL","BIGINT","DECIMAL","DATE");
     private PlanContract() {}
+    /** 校验公开计划的算子、子节点及表达式结构；表列是否存在仍由语义分析负责。 */
     public static void validate(Map<String,Object> p) {
         String kind = text(p,"kind"); List<Map<String,Object>> children = nodes(p.get("children"));
+        // children 表示数据输入：连接有左右两个输入，查询变换有一个输入，扫描和写操作是叶子。
         int count = switch(kind) {case "Join" -> 2; case "Project","Filter","Sort","GroupBy" -> 1;
             case "CreateTable","Insert","Update","Delete","SeqScan" -> 0; default -> throw new IllegalArgumentException("未知计划："+kind);};
         if(children.size()!=count || p.containsKey("version")) invalid("计划子节点数量或协议字段无效");
         schema(p.get("schema")); for(var child:children)validate(child);
+        // 扩展算子时需同步生成器、此处校验和执行器；内部 rows/items 等表示不能直接跨模块传递。
         switch(kind) {
             case "CreateTable" -> {text(p,"table");schema(p.get("columns"));if(nodes(p.get("columns")).isEmpty())invalid("空列定义");}
             case "Insert" -> {text(p,"table");List<String> columns=strings(p.get("columns"));List<Map<String,Object>> values=nodes(p.get("values"));
@@ -30,10 +33,12 @@ public final class PlanContract {
     }
     private static void schema(Object value) {for(var c:nodes(value)){text(c,"name");if(!TYPES.contains(text(c,"dataType")))invalid("schema 类型无效");}}
     private static void predicate(Map<String,Object> p,boolean required) {
+        // Update/Delete 允许 predicate 为 null；Filter 必须有条件，否则这个节点没有筛选含义。
         if(!p.containsKey("predicate") || required && p.get("predicate")==null)invalid("缺少 predicate");
         if(p.get("predicate")!=null){var e=map(p.get("predicate"));expression(e);if(!Set.of("BOOL","NULL").contains(text(e,"inferredType")))invalid("predicate 类型无效");}
     }
     private static void expression(Map<String,Object> e) {
+        // SQL NULL 有独立节点和类型，不等同于字段缺失，也不能伪装成普通 LiteralExpr。
         String type=text(e,"inferredType"),kind=text(e,"kind");if(!TYPES.contains(type) && !type.equals("NULL"))invalid("表达式类型无效");
         switch(kind) {
             case "LiteralExpr" -> {if(!type.equals(text(e,"literalType")) || !e.containsKey("value") || e.get("value")==null)invalid("字面量无效");}
